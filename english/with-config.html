@@ -505,7 +505,8 @@ Neue Kategorien starten mit "##".
                 msg.style.opacity = '1';
                 setTimeout(() => { msg.style.opacity = '0'; }, 3000);
             }).catch(err => {
-                alert('Fehler beim Kopieren: ' + err);
+                console.error('Clipboard error:', err);
+                alert('Link konnte nicht in die Zwischenablage kopiert werden. Bitte kopieren Sie ihn manuell:\n\n' + shareUrl);
             });
         }
 
@@ -522,9 +523,10 @@ Neue Kategorien starten mit "##".
                     const newVocabs = newData[category];
                     
                     newVocabs.forEach(newVocab => {
-                        // Check if vocabulary already exists (same question)
+                        // Check if vocabulary already exists (same question and answer)
                         const isDuplicate = existingVocabs.some(v => 
-                            v.q.toLowerCase() === newVocab.q.toLowerCase()
+                            v.q.toLowerCase() === newVocab.q.toLowerCase() &&
+                            v.a.toLowerCase() === newVocab.a.toLowerCase()
                         );
                         
                         if (!isDuplicate) {
@@ -563,15 +565,22 @@ Neue Kategorien starten mit "##".
             
             if (encodedConfig) {
                 try {
-                    // Decode config from base64
-                    const decodedConfig = decodeURIComponent(atob(encodedConfig));
+                    // Decode config from base64 with validation
+                    const base64Decoded = atob(encodedConfig);
+                    const decodedConfig = decodeURIComponent(base64Decoded);
+                    
+                    // Validate that decoded config is not empty
+                    if (!decodedConfig || decodedConfig.trim().length === 0) {
+                        throw new Error('Leere Konfiguration');
+                    }
+                    
                     pendingImportConfig = decodedConfig;
                     
                     // Show import dialog
                     document.getElementById('import-dialog').classList.remove('hidden');
                 } catch (err) {
                     console.error('Fehler beim Dekodieren der Konfiguration:', err);
-                    alert('Fehler: Ungültiger Konfigurations-Link');
+                    alert('Der geteilte Link ist beschädigt oder ungültig. Bitte überprüfen Sie den Link und versuchen Sie es erneut.');
                 }
             }
         }
