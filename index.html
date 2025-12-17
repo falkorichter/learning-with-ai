@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning with AI - Übersicht</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.6s ease-out;
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                Learning with AI
+            </h1>
+            <p class="text-slate-600 mt-2">Interaktive Lernwerkzeuge und Vokabeltrainer</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-12">
+        
+        <!-- Introduction -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-8 animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Willkommen! 👋</h2>
+            <p class="text-slate-600 leading-relaxed">
+                Diese Seite bietet eine Übersicht über alle verfügbaren Lerntools in diesem Repository.
+                Wähle ein Tool aus, um mit dem Lernen zu beginnen.
+            </p>
+        </div>
+
+        <!-- Cards Grid -->
+        <div class="grid md:grid-cols-2 gap-6">
+            
+            <!-- Card 1: Appearance Vocabulary Trainer -->
+            <a href="english/index.html" class="block">
+                <div class="bg-white rounded-xl shadow-lg p-6 card-hover animate-fade-in border-2 border-transparent hover:border-indigo-400">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="bg-indigo-100 rounded-lg p-3">
+                            <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">English</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Appearance Vocabulary Trainer</h3>
+                    <p class="text-slate-600 text-sm mb-4">
+                        Lerne englische Vokabeln zum Thema Aussehen und Beschreibung von Personen. 
+                        Enthält Kategorien wie Haare, Gesicht, Körperbau und mehr.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Quiz-Modus</span>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Lern-Modus</span>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">React App</span>
+                    </div>
+                    <div class="flex items-center text-indigo-600 font-semibold text-sm">
+                        Jetzt lernen
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Card 2: Dynamic Vocabulary Trainer -->
+            <a href="english/with-config.html" class="block">
+                <div class="bg-white rounded-xl shadow-lg p-6 card-hover animate-fade-in border-2 border-transparent hover:border-purple-400" style="animation-delay: 0.1s">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="bg-purple-100 rounded-lg p-3">
+                            <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                        </div>
+                        <span class="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full">English</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Dynamischer Vokabeltrainer</h3>
+                    <p class="text-slate-600 text-sm mb-4">
+                        Flexibler Vokabeltrainer mit Markdown-Konfiguration. Erstelle und bearbeite 
+                        deine eigenen Vokabellisten direkt im Browser.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Flashcards</span>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Anpassbar</span>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">LocalStorage</span>
+                    </div>
+                    <div class="flex items-center text-purple-600 font-semibold text-sm">
+                        Jetzt lernen
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Footer Info -->
+        <div class="mt-12 text-center text-slate-500 text-sm">
+            <p>
+                Gehostet auf 
+                <a href="https://falkorichter.github.io/learning-with-ai/" 
+                   class="text-indigo-600 hover:text-indigo-800 underline"
+                   target="_blank">
+                    GitHub Pages
+                </a>
+            </p>
+        </div>
+
+    </main>
+
+</body>
+</html>
