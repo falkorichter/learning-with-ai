@@ -25,3 +25,7 @@ Simply edit the HTML files and create a pull request. Your changes will be autom
 ## Live Site
 
 Visit the live site at: [https://falkorichter.github.io/learning-with-ai/](https://falkorichter.github.io/learning-with-ai/)
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
