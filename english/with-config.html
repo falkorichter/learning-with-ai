@@ -868,6 +868,7 @@ Neue Kategorien starten mit "##".
         function initQuiz() {
             quizScore = 0;
             quizAttempts = 0;
+            selectedOption = null;
             document.getElementById('quiz-score').innerText = quizScore;
             document.getElementById('quiz-attempts').innerText = quizAttempts;
             generateQuizQuestion();
