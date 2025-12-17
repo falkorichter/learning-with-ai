@@ -150,14 +150,45 @@
                 <button onclick="saveConfig()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-save"></i> Speichern & Laden
                 </button>
+                <button onclick="shareConfig()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-share-nodes"></i> Teilen
+                </button>
             </div>
             
             <div id="save-msg" class="text-center text-green-600 text-sm mt-2 opacity-0 transition-opacity">
                 Konfiguration gespeichert!
             </div>
+            <div id="share-msg" class="text-center text-indigo-600 text-sm mt-2 opacity-0 transition-opacity">
+                Link in Zwischenablage kopiert!
+            </div>
         </div>
 
     </main>
+
+    <!-- Import Dialog Modal -->
+    <div id="import-dialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in">
+            <h2 class="text-xl font-bold text-slate-800 mb-4">
+                <i class="fa-solid fa-download text-indigo-600"></i> Vokabeln importieren
+            </h2>
+            <p class="text-slate-600 mb-6">
+                Du hast einen Link mit neuen Vokabeln geöffnet. Wie möchtest du fortfahren?
+            </p>
+            
+            <div class="space-y-3 mb-6">
+                <button onclick="importConfig('replace')" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate"></i> Ersetzen (alte Daten löschen)
+                </button>
+                <button onclick="importConfig('append')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Anfügen (mit Zusammenführung)
+                </button>
+            </div>
+            
+            <button onclick="closeImportDialog()" class="w-full text-slate-500 hover:text-slate-700 text-sm underline">
+                Abbrechen
+            </button>
+        </div>
+    </div>
 
     <!-- JavaScript Logic -->
     <script>
@@ -456,8 +487,128 @@ Neue Kategorien starten mit "##".
             }
         }
 
+        // --- 9. CONFIG SHARING FUNKTIONEN ---
+        
+        // Share config via URL
+        function shareConfig() {
+            const config = document.getElementById('config-editor').value;
+            
+            // Encode config to base64 for URL
+            const encodedConfig = btoa(encodeURIComponent(config));
+            
+            // Create shareable URL
+            const shareUrl = window.location.origin + window.location.pathname + '?config=' + encodedConfig;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                const msg = document.getElementById('share-msg');
+                msg.style.opacity = '1';
+                setTimeout(() => { msg.style.opacity = '0'; }, 3000);
+            }).catch(err => {
+                alert('Fehler beim Kopieren: ' + err);
+            });
+        }
+
+        // Merge two markdown configs with duplicate detection
+        function mergeConfigs(existingMarkdown, newMarkdown) {
+            const existingData = parseMarkdown(existingMarkdown);
+            const newData = parseMarkdown(newMarkdown);
+            
+            // Merge categories
+            Object.keys(newData).forEach(category => {
+                if (existingData[category]) {
+                    // Category exists - merge vocabularies and avoid duplicates
+                    const existingVocabs = existingData[category];
+                    const newVocabs = newData[category];
+                    
+                    newVocabs.forEach(newVocab => {
+                        // Check if vocabulary already exists (same question)
+                        const isDuplicate = existingVocabs.some(v => 
+                            v.q.toLowerCase() === newVocab.q.toLowerCase()
+                        );
+                        
+                        if (!isDuplicate) {
+                            existingData[category].push(newVocab);
+                        }
+                    });
+                } else {
+                    // New category - add it
+                    existingData[category] = newData[category];
+                }
+            });
+            
+            // Convert back to markdown
+            let mergedMarkdown = '# Vokabel-Datenbank\n\n';
+            mergedMarkdown += 'Hier können neue Vokabeln hinzugefügt werden.\n';
+            mergedMarkdown += 'Format: "- Fremdwort : Übersetzung"\n';
+            mergedMarkdown += 'Neue Kategorien starten mit "##".\n\n';
+            
+            Object.keys(existingData).forEach(category => {
+                mergedMarkdown += `## ${category}\n`;
+                existingData[category].forEach(vocab => {
+                    mergedMarkdown += `- ${vocab.q} : ${vocab.a}\n`;
+                });
+                mergedMarkdown += '\n';
+            });
+            
+            return mergedMarkdown;
+        }
+
+        // Import config from URL parameter
+        let pendingImportConfig = null;
+        
+        function checkForSharedConfig() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedConfig = urlParams.get('config');
+            
+            if (encodedConfig) {
+                try {
+                    // Decode config from base64
+                    const decodedConfig = decodeURIComponent(atob(encodedConfig));
+                    pendingImportConfig = decodedConfig;
+                    
+                    // Show import dialog
+                    document.getElementById('import-dialog').classList.remove('hidden');
+                } catch (err) {
+                    console.error('Fehler beim Dekodieren der Konfiguration:', err);
+                    alert('Fehler: Ungültiger Konfigurations-Link');
+                }
+            }
+        }
+
+        function importConfig(mode) {
+            if (!pendingImportConfig) return;
+            
+            if (mode === 'replace') {
+                // Replace existing config
+                document.getElementById('config-editor').value = pendingImportConfig;
+            } else if (mode === 'append') {
+                // Merge with existing config
+                const existingConfig = document.getElementById('config-editor').value;
+                const mergedConfig = mergeConfigs(existingConfig, pendingImportConfig);
+                document.getElementById('config-editor').value = mergedConfig;
+            }
+            
+            // Save and reload
+            saveConfig();
+            
+            // Close dialog and clear URL parameter
+            closeImportDialog();
+            
+            // Clear URL parameter without reloading page
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        function closeImportDialog() {
+            document.getElementById('import-dialog').classList.add('hidden');
+            pendingImportConfig = null;
+        }
+
         // --- START ---
         initApp();
+        
+        // Check for shared config on load
+        checkForSharedConfig();
 
     </script>
 </body>
