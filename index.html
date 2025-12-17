@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning with AI - Übersicht</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
+        // Tailwind config must be set before loading Tailwind
+        window.tailwindConfig = {
             darkMode: 'class'
         }
     </script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Dark mode toggle logic - must run before page renders
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
