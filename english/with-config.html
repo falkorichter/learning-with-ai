@@ -25,6 +25,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
+    
     <style>
         body { font-family: 'Inter', sans-serif; }
         
@@ -90,6 +91,9 @@
             <button onclick="switchTab('learn')" id="btn-learn" class="flex-1 py-4 text-center font-semibold text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
                 <i class="fa-solid fa-layer-group mb-1 block"></i> Lernen
             </button>
+            <button onclick="switchTab('quiz')" id="btn-quiz" class="flex-1 py-4 text-center font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-circle-question mb-1 block"></i> Quiz üben
+            </button>
             <button onclick="switchTab('list')" id="btn-list" class="flex-1 py-4 text-center font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
                 <i class="fa-solid fa-list mb-1 block"></i> Liste
             </button>
@@ -145,6 +149,35 @@
                     Karte <span id="card-counter">0/0</span>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- Content: Quiz -->
+        <div id="tab-quiz" class="tab-content hidden flex-grow flex flex-col p-6 overflow-y-auto">
+            <div class="max-w-md mx-auto w-full space-y-6">
+                
+                <div class="flex justify-between items-center text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+                    <span>Score: <span id="quiz-score">0</span></span>
+                    <span>Fragen: <span id="quiz-attempts">0</span></span>
+                </div>
+
+                <div class="py-8 text-center">
+                    <span class="block text-slate-500 dark:text-slate-400 text-sm mb-2">Wie sagt man auf Englisch:</span>
+                    <h2 id="quiz-question" class="text-3xl font-extrabold text-slate-800 dark:text-slate-100">
+                        Loading...
+                    </h2>
+                </div>
+
+                <div id="quiz-options" class="grid gap-3">
+                    <!-- Options will be generated here -->
+                </div>
+
+                <div id="quiz-next-btn" class="pt-4 hidden">
+                    <button onclick="nextQuizQuestion()" class="w-full bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-800 text-white font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-rotate"></i>
+                        Nächste Frage
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -327,6 +360,13 @@ Neue Kategorien starten mit "##".
         let currentCardIndex = 0;
         let isFlipped = false;
         
+        // Quiz State
+        let quizItem = null;
+        let quizOptions = [];
+        let selectedOption = null;
+        let quizScore = 0;
+        let quizAttempts = 0;
+        
         // --- 3. PARSER (Kern-Logik) ---
         function parseMarkdown(text) {
             const lines = text.split('\n');
@@ -486,6 +526,11 @@ Neue Kategorien starten mit "##".
             const btn = document.getElementById(`btn-${tabId}`);
             btn.classList.remove('text-slate-500', 'dark:text-slate-400');
             btn.classList.add('text-indigo-600', 'dark:text-indigo-400', 'border-b-2', 'border-indigo-600', 'dark:border-indigo-400');
+            
+            // Initialize quiz when quiz tab is opened
+            if (tabId === 'quiz') {
+                initQuiz();
+            }
         }
 
         // --- 7. LISTEN ANSICHT ---
@@ -690,6 +735,144 @@ Neue Kategorien starten mit "##".
         function closeImportDialog() {
             document.getElementById('import-dialog').classList.add('hidden');
             pendingImportConfig = null;
+        }
+
+        // --- 10. QUIZ FUNCTIONS ---
+        
+        // Get all vocabularies from all categories as a flat list
+        function getAllVocabs() {
+            let all = [];
+            Object.values(vocabData).forEach(list => {
+                all = [...all, ...list];
+            });
+            return all;
+        }
+        
+        // Generate a new quiz question
+        function generateQuizQuestion() {
+            const allVocabs = getAllVocabs();
+            
+            if (allVocabs.length === 0) {
+                document.getElementById('quiz-question').innerText = 'Keine Vokabeln verfügbar';
+                document.getElementById('quiz-options').innerHTML = '';
+                return;
+            }
+            
+            // Select random target word
+            const randomTarget = allVocabs[Math.floor(Math.random() * allVocabs.length)];
+            
+            // Select 3 wrong options (distractors)
+            let distractors = [];
+            while (distractors.length < 3 && allVocabs.length > 1) {
+                const randomDistractor = allVocabs[Math.floor(Math.random() * allVocabs.length)];
+                if (randomDistractor.q !== randomTarget.q && !distractors.find(d => d.q === randomDistractor.q)) {
+                    distractors.push(randomDistractor);
+                }
+            }
+            
+            // If we don't have enough distractors (less than 4 total vocabs), pad with duplicates
+            while (distractors.length < 3) {
+                distractors.push({ q: `Option ${distractors.length + 1}`, a: 'N/A' });
+            }
+            
+            // Shuffle options
+            const options = [...distractors, randomTarget].sort(() => Math.random() - 0.5);
+            
+            quizItem = randomTarget;
+            quizOptions = options;
+            selectedOption = null;
+            
+            // Update UI
+            document.getElementById('quiz-question').innerText = `"${randomTarget.a}"?`;
+            renderQuizOptions();
+            document.getElementById('quiz-next-btn').classList.add('hidden');
+        }
+        
+        // Render quiz options
+        function renderQuizOptions() {
+            const container = document.getElementById('quiz-options');
+            container.innerHTML = '';
+            
+            quizOptions.forEach((option, idx) => {
+                const button = document.createElement('button');
+                button.onclick = () => handleQuizOptionClick(option);
+                button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-200 shadow-sm hover:shadow-md';
+                
+                button.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span>${option.q}</span>
+                    </div>
+                `;
+                
+                container.appendChild(button);
+            });
+        }
+        
+        // Handle option click
+        function handleQuizOptionClick(option) {
+            if (selectedOption) return; // Prevent multiple clicks
+            
+            selectedOption = option;
+            const correct = option.q === quizItem.q;
+            
+            quizAttempts++;
+            if (correct) {
+                quizScore++;
+            }
+            
+            // Update score display
+            document.getElementById('quiz-score').innerText = quizScore;
+            document.getElementById('quiz-attempts').innerText = quizAttempts;
+            
+            // Update option buttons to show result
+            const container = document.getElementById('quiz-options');
+            const buttons = container.querySelectorAll('button');
+            
+            quizOptions.forEach((opt, idx) => {
+                const button = buttons[idx];
+                button.disabled = true;
+                
+                if (opt.q === quizItem.q) {
+                    // Correct answer - always show green
+                    button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-green-100 dark:bg-green-900 border-green-500 dark:border-green-600 text-green-800 dark:text-green-200 shadow-md';
+                    button.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span>${opt.q}</span>
+                            <i class="fa-solid fa-circle-check text-xl"></i>
+                        </div>
+                    `;
+                } else if (selectedOption === opt && !correct) {
+                    // Wrong selected option - show red
+                    button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-red-100 dark:bg-red-900 border-red-500 dark:border-red-600 text-red-800 dark:text-red-200';
+                    button.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span>${opt.q}</span>
+                            <i class="fa-solid fa-circle-xmark text-xl"></i>
+                        </div>
+                    `;
+                } else {
+                    // Not selected - fade out
+                    button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 opacity-50';
+                }
+            });
+            
+            // Show next button
+            document.getElementById('quiz-next-btn').classList.remove('hidden');
+        }
+        
+        // Next question
+        function nextQuizQuestion() {
+            generateQuizQuestion();
+        }
+        
+        // Initialize quiz when tab is opened
+        function initQuiz() {
+            quizScore = 0;
+            quizAttempts = 0;
+            selectedOption = null;
+            document.getElementById('quiz-score').innerText = quizScore;
+            document.getElementById('quiz-attempts').innerText = quizAttempts;
+            generateQuizQuestion();
         }
 
         // --- DARK MODE TOGGLE ---
