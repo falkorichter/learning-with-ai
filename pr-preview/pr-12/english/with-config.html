@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamischer Vokabeltrainer</title>
+    <!-- Tailwind CSS -->
+    <script>
+        // Tailwind config must be set before loading Tailwind
+        window.tailwindConfig = {
+            darkMode: 'class'
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Dark mode initialization - must run before page renders
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <!-- FontAwesome für Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Karten-Animationen */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        
+        /* Smooth transition für die Karte */
+        .card-inner {
+            transition: transform 0.6s;
+        }
+        
+        /* Scrollbar styling für die Liste */
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .dark .custom-scroll::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #c7c7c7;
+            border-radius: 4px;
+        }
+        .dark .custom-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a0a0a0;
+        }
+        .dark .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 dark:bg-indigo-700 text-white p-4 shadow-lg z-10 transition-colors duration-300">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap"></i> Vokabel-Master
+            </h1>
+            <div class="flex items-center gap-3">
+                <div class="text-xs bg-indigo-500 dark:bg-indigo-800 px-2 py-1 rounded">Markdown Config Mode</div>
+                <button id="theme-toggle" class="p-2 rounded-lg bg-indigo-700 dark:bg-indigo-800 hover:bg-indigo-800 dark:hover:bg-indigo-900 transition-colors duration-200" aria-label="Toggle dark mode">
+                    <i id="theme-toggle-dark-icon" class="fa-solid fa-moon hidden"></i>
+                    <i id="theme-toggle-light-icon" class="fa-solid fa-sun hidden"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow overflow-hidden relative w-full max-w-4xl mx-auto bg-white dark:bg-slate-800 shadow-xl md:my-4 md:rounded-xl flex flex-col transition-colors duration-300">
+        
+        <!-- Navigation Tabs -->
+        <nav class="flex border-b border-slate-200 dark:border-slate-700">
+            <button onclick="switchTab('learn')" id="btn-learn" class="flex-1 py-4 text-center font-semibold text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-layer-group mb-1 block"></i> Lernen
+            </button>
+            <button onclick="switchTab('list')" id="btn-list" class="flex-1 py-4 text-center font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-list mb-1 block"></i> Liste
+            </button>
+            <button onclick="switchTab('settings')" id="btn-settings" class="flex-1 py-4 text-center font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-gear mb-1 block"></i> Config
+            </button>
+        </nav>
+
+        <!-- Content: Lernen (Flashcards) -->
+        <div id="tab-learn" class="tab-content flex-grow flex flex-col p-4 overflow-y-auto">
+            
+            <!-- Kategorie Auswahl -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Kategorie wählen:</label>
+                <select id="category-select" onchange="changeCategory()" class="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-colors duration-300">
+                    <!-- Optionen werden per JS gefüllt -->
+                </select>
+            </div>
+
+            <!-- Flashcard Bereich -->
+            <div class="flex-grow flex flex-col justify-center items-center min-h-[300px]">
+                
+                <!-- Karte -->
+                <div class="group w-full max-w-sm h-64 perspective-1000 cursor-pointer" onclick="flipCard()">
+                    <div id="flashcard-inner" class="card-inner relative w-full h-full text-center transform-style-3d shadow-xl rounded-2xl">
+                        
+                        <!-- Vorderseite (Frage/Fremdsprache) -->
+                        <div class="absolute w-full h-full backface-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 dark:from-indigo-600 dark:to-indigo-800 text-white rounded-2xl flex flex-col justify-center items-center p-6">
+                            <span class="text-sm opacity-75 uppercase tracking-wider mb-2 font-semibold">Englisch</span>
+                            <h2 id="card-front" class="text-3xl font-bold break-words">Loading...</h2>
+                            <div class="mt-4 text-xs bg-white/20 px-3 py-1 rounded-full">Klicken zum Umdrehen</div>
+                        </div>
+
+                        <!-- Rückseite (Antwort/Deutsch) -->
+                        <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-2xl border-2 border-indigo-100 dark:border-indigo-600 flex flex-col justify-center items-center p-6">
+                            <span class="text-sm text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-2 font-semibold">Deutsch</span>
+                            <h2 id="card-back" class="text-3xl font-bold break-words text-indigo-900 dark:text-indigo-200">...</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex gap-4 mt-8 w-full max-w-sm justify-between">
+                    <button onclick="prevCard()" class="flex-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold py-3 px-4 rounded-lg transition active:scale-95">
+                        <i class="fa-solid fa-arrow-left"></i> Zurück
+                    </button>
+                    <button onclick="nextCard()" class="flex-1 bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-800 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition active:scale-95">
+                        Weiter <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+                
+                <div class="mt-4 text-slate-400 dark:text-slate-500 text-sm">
+                    Karte <span id="card-counter">0/0</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Content: Liste (Alle Vokabeln) -->
+        <div id="tab-list" class="tab-content hidden flex-grow overflow-hidden flex flex-col">
+            <div class="p-4 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 transition-colors duration-300">
+                <input type="text" id="search-input" onkeyup="filterList()" placeholder="Suchen..." class="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg pl-10 focus:ring-2 focus:ring-indigo-500 outline-none transition-colors duration-300">
+                <i class="fa-solid fa-search absolute left-8 top-[1.65rem] text-slate-400 dark:text-slate-500"></i>
+            </div>
+            <div id="vocab-list-container" class="flex-grow overflow-y-auto custom-scroll p-4 space-y-2">
+                <!-- Liste wird per JS generiert -->
+            </div>
+        </div>
+
+        <!-- Content: Einstellungen (Markdown Editor) -->
+        <div id="tab-settings" class="tab-content hidden flex-grow flex flex-col p-4 overflow-hidden">
+            <div class="mb-2 flex justify-between items-end">
+                <div>
+                    <h2 class="font-bold text-lg text-slate-800 dark:text-slate-100">Konfiguration</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Bearbeite die Vokabeln direkt im Markdown-Format.</p>
+                </div>
+                <div class="space-x-2">
+                     <button onclick="resetToDefault()" class="text-xs text-red-500 dark:text-red-400 underline hover:text-red-700 dark:hover:text-red-300">Standard wiederherstellen</button>
+                </div>
+            </div>
+            
+            <div class="flex-grow relative border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden transition-colors duration-300">
+                <textarea id="config-editor" class="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 transition-colors duration-300" spellcheck="false"></textarea>
+            </div>
+
+            <div class="mt-4 flex gap-3">
+                <button onclick="saveConfig()" class="flex-1 bg-green-600 dark:bg-green-700 hover:bg-green-700 dark:hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-save"></i> Speichern & Laden
+                </button>
+                <button onclick="shareConfig()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-share-nodes"></i> Teilen
+                </button>
+            </div>
+            
+            <div id="save-msg" class="text-center text-green-600 dark:text-green-400 text-sm mt-2 opacity-0 transition-opacity">
+                Konfiguration gespeichert!
+            </div>
+            <div id="share-msg" class="text-center text-indigo-600 text-sm mt-2 opacity-0 transition-opacity">
+                Link in Zwischenablage kopiert!
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Import Dialog Modal -->
+    <div id="import-dialog" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-in">
+            <h2 class="text-xl font-bold text-slate-800 mb-4">
+                <i class="fa-solid fa-download text-indigo-600"></i> Vokabeln importieren
+            </h2>
+            <p class="text-slate-600 mb-6">
+                Du hast einen Link mit neuen Vokabeln geöffnet. Wie möchtest du fortfahren?
+            </p>
+            
+            <div class="space-y-3 mb-6">
+                <button onclick="importConfig('replace')" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate"></i> Ersetzen (alte Daten löschen)
+                </button>
+                <button onclick="importConfig('append')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Anfügen (mit Zusammenführung)
+                </button>
+            </div>
+            
+            <button onclick="closeImportDialog()" class="w-full text-slate-500 hover:text-slate-700 text-sm underline">
+                Abbrechen
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. DEFAULT DATEN (Fallback) ---
+        const defaultMarkdown = `# Vokabel-Datenbank
+
+Hier können neue Vokabeln hinzugefügt werden.
+Format: "- Fremdwort : Übersetzung"
+Neue Kategorien starten mit "##".
+
+## Haare (Hair)
+- blonde : blond
+- brunette : brunette / braunhaarig
+- redhead / red-haired : rothaarig
+- black hair : schwarze Haare
+- grey hair : graue Haare
+- straight : glatt
+- wavy : gewellt
+- curly : lockig
+- bald : Glatze
+- ponytail : Pferdeschwanz
+- shoulder-length : Schulterlang
+
+## Gesicht & Augen (Face & Eyes)
+- blue eyes : blaue Augen
+- brown eyes : braune Augen
+- green eyes : grüne Augen
+- hazel eyes : haselnussbraune Augen
+- freckles : Sommersprossen
+- beard : Bart
+- mustache : Schnurrbart
+- wrinkles : Falten
+- glasses : Brille
+- mole : Muttermal
+
+## Hautfarbe & Teint (Complexion)
+- pale / fair : blass / hell
+- tanned : gebräunt
+- dark-skinned : dunkelhäutig
+- light-skinned : hellhäutig
+- olive skin : olivfarbener Teint
+
+## Körperbau & Statur (Build)
+- tall : groß
+- short : klein
+- slim / slender : schlank
+- thin : dünn
+- plump / chubby : pummelig / mollig
+- overweight : übergewichtig
+- muscular : muskulös
+- average build : durchschnittlich gebaut
+- fit / well-built : fit / gut gebaut
+
+## Alter (Age)
+- young : jung
+- middle-aged : mittleren Alters
+- elderly / old : alt / ältlich
+- teenager : Teenager
+- in his/her twenties : in den Zwanzigern
+
+## Begrüßung & Basics
+- Hello : Hallo
+- Good morning : Guten Morgen
+- Good night : Gute Nacht
+- Goodbye : Auf Wiedersehen
+- Please : Bitte
+- Thank you : Danke
+- Yes : Ja
+- No : Nein
+
+## Familie
+- Family : Familie
+- Mother : Mutter
+- Father : Vater
+- Brother : Bruder
+- Sister : Schwester
+- Friend : Freund
+
+## Essen & Trinken
+- Food : Essen
+- Water : Wasser
+- Bread : Brot
+- Cheese : Käse
+- Apple : Apfel
+- Banana : Banane
+- Coffee : Kaffee
+
+## Farben
+- Red : Rot
+- Blue : Blau
+- Green : Grün
+- Yellow : Gelb
+- Black : Schwarz
+- White : Weiß
+
+## Verben
+- To go : Gehen
+- To eat : Essen
+- To sleep : Schlafen
+- To see : Sehen
+- To learn : Lernen
+- To work : Arbeiten`;
+
+        // --- 2. STATE MANAGEMENT ---
+        let vocabData = {}; // Struktur: { "Kategorie": [ {q: "...", a: "..."}, ... ] }
+        let currentCategory = "";
+        let currentCardIndex = 0;
+        let isFlipped = false;
+        
+        // --- 3. PARSER (Kern-Logik) ---
+        function parseMarkdown(text) {
+            const lines = text.split('\n');
+            const data = {};
+            let currentCatName = "Unkategorisiert";
+
+            lines.forEach(line => {
+                line = line.trim();
+                
+                // Leere Zeilen oder Kommentare ignorieren
+                if (!line) return;
+                if (line.startsWith('# ') || (line.startsWith('#') && !line.startsWith('##'))) return; // Titel ignorieren
+
+                // Kategorie erkennen (##)
+                if (line.startsWith('##')) {
+                    currentCatName = line.replace(/^##\s*/, '').trim();
+                    if (!data[currentCatName]) {
+                        data[currentCatName] = [];
+                    }
+                } 
+                // Vokabel erkennen (- Englisch : Deutsch)
+                else if (line.startsWith('-')) {
+                    // Entferne das führende "-"
+                    const content = line.substring(1);
+                    // Split am Doppelpunkt
+                    const parts = content.split(':');
+                    
+                    if (parts.length >= 2) {
+                        const question = parts[0].trim();
+                        // Alles nach dem ersten Doppelpunkt ist die Antwort (falls der Satz Doppelpunkte enthält)
+                        const answer = parts.slice(1).join(':').trim();
+                        
+                        // Wenn noch keine Kategorie existiert, erstelle Default
+                        if (!data[currentCatName]) data[currentCatName] = [];
+                        
+                        data[currentCatName].push({ q: question, a: answer });
+                    }
+                }
+            });
+            return data;
+        }
+
+        // --- 4. INITIALISIERUNG ---
+        function initApp() {
+            // Versuche Daten aus LocalStorage zu laden, sonst Default
+            const savedConfig = localStorage.getItem('vocabConfig');
+            const configToUse = savedConfig ? savedConfig : defaultMarkdown;
+            
+            document.getElementById('config-editor').value = configToUse;
+            
+            // Parsen
+            vocabData = parseMarkdown(configToUse);
+            
+            // UI aufbauen
+            populateCategorySelect();
+            updateListTab();
+            
+            // Wähle erste Kategorie
+            const categories = Object.keys(vocabData);
+            if (categories.length > 0) {
+                currentCategory = categories[0];
+                currentCardIndex = 0;
+                showCard();
+            }
+        }
+
+        // --- 5. UI FUNKTIONEN ---
+
+        function populateCategorySelect() {
+            const select = document.getElementById('category-select');
+            select.innerHTML = '';
+            
+            Object.keys(vocabData).forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = `${cat} (${vocabData[cat].length})`;
+                select.appendChild(option);
+            });
+        }
+
+        function changeCategory() {
+            currentCategory = document.getElementById('category-select').value;
+            currentCardIndex = 0;
+            isFlipped = false;
+            resetCardVisuals();
+            showCard();
+        }
+
+        function showCard() {
+            if (!currentCategory || !vocabData[currentCategory]) return;
+            
+            const cards = vocabData[currentCategory];
+            if (cards.length === 0) {
+                document.getElementById('card-front').innerText = "Leer";
+                document.getElementById('card-back').innerText = "Leer";
+                return;
+            }
+
+            const card = cards[currentCardIndex];
+            
+            document.getElementById('card-front').innerText = card.q;
+            document.getElementById('card-back').innerText = card.a;
+            document.getElementById('card-counter').innerText = `${currentCardIndex + 1} / ${cards.length}`;
+        }
+
+        function flipCard() {
+            const cardInner = document.getElementById('flashcard-inner');
+            isFlipped = !isFlipped;
+            if (isFlipped) {
+                cardInner.classList.add('rotate-y-180');
+            } else {
+                cardInner.classList.remove('rotate-y-180');
+            }
+        }
+
+        function resetCardVisuals() {
+            const cardInner = document.getElementById('flashcard-inner');
+            cardInner.classList.remove('rotate-y-180');
+            isFlipped = false;
+        }
+
+        function nextCard() {
+            if (!vocabData[currentCategory]) return;
+            resetCardVisuals();
+            setTimeout(() => {
+                currentCardIndex++;
+                if (currentCardIndex >= vocabData[currentCategory].length) {
+                    currentCardIndex = 0; // Loop zurück zum Anfang
+                }
+                showCard();
+            }, 200); // Kurz warten bis zurückgedreht
+        }
+
+        function prevCard() {
+            if (!vocabData[currentCategory]) return;
+            resetCardVisuals();
+            setTimeout(() => {
+                currentCardIndex--;
+                if (currentCardIndex < 0) {
+                    currentCardIndex = vocabData[currentCategory].length - 1;
+                }
+                showCard();
+            }, 200);
+        }
+
+        // --- 6. TAB NAVIGATION ---
+        function switchTab(tabId) {
+            // Hide all
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('nav button').forEach(el => {
+                el.classList.remove('text-indigo-600', 'dark:text-indigo-400', 'border-b-2', 'border-indigo-600', 'dark:border-indigo-400');
+                el.classList.add('text-slate-500', 'dark:text-slate-400');
+            });
+            
+            // Show active
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const btn = document.getElementById(`btn-${tabId}`);
+            btn.classList.remove('text-slate-500', 'dark:text-slate-400');
+            btn.classList.add('text-indigo-600', 'dark:text-indigo-400', 'border-b-2', 'border-indigo-600', 'dark:border-indigo-400');
+        }
+
+        // --- 7. LISTEN ANSICHT ---
+        function updateListTab() {
+            const container = document.getElementById('vocab-list-container');
+            container.innerHTML = '';
+            
+            Object.keys(vocabData).forEach(cat => {
+                // Header für Kategorie
+                const header = document.createElement('h3');
+                header.className = "text-indigo-600 dark:text-indigo-400 font-bold mt-4 mb-2 uppercase text-xs tracking-wider border-b border-indigo-100 dark:border-indigo-800 pb-1";
+                header.textContent = cat;
+                container.appendChild(header);
+                
+                // Items
+                vocabData[cat].forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "vocab-item bg-white dark:bg-slate-700 p-3 rounded shadow-sm border border-slate-100 dark:border-slate-600 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors duration-200";
+                    row.innerHTML = `
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">${item.q}</span>
+                        <span class="text-slate-500 dark:text-slate-400"><i class="fa-solid fa-arrow-right text-xs mx-2 text-slate-300 dark:text-slate-600"></i> ${item.a}</span>
+                    `;
+                    container.appendChild(row);
+                });
+            });
+        }
+
+        function filterList() {
+            const term = document.getElementById('search-input').value.toLowerCase();
+            const items = document.querySelectorAll('.vocab-item');
+            
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                if (text.includes(term)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // --- 8. CONFIG EDITOR FUNKTIONEN ---
+        function saveConfig() {
+            const newConfig = document.getElementById('config-editor').value;
+            
+            // Speichern
+            localStorage.setItem('vocabConfig', newConfig);
+            
+            // Neu Parsen und Init
+            vocabData = parseMarkdown(newConfig);
+            populateCategorySelect();
+            updateListTab();
+            
+            // Reset App State
+            currentCardIndex = 0;
+            isFlipped = false;
+            
+            // Check if current category still exists
+            const categories = Object.keys(vocabData);
+            if (!categories.includes(currentCategory) && categories.length > 0) {
+                currentCategory = categories[0];
+            }
+            document.getElementById('category-select').value = currentCategory;
+            
+            resetCardVisuals();
+            showCard();
+            
+            // Feedback anzeigen
+            const msg = document.getElementById('save-msg');
+            msg.style.opacity = '1';
+            setTimeout(() => { msg.style.opacity = '0'; }, 2000);
+        }
+
+        function resetToDefault() {
+            if(confirm("Wirklich auf Standard-Vokabeln zurücksetzen? Deine Änderungen gehen verloren.")) {
+                document.getElementById('config-editor').value = defaultMarkdown;
+                saveConfig();
+            }
+        }
+
+        // --- 9. CONFIG SHARING FUNKTIONEN ---
+        
+        // Share config via URL
+        function shareConfig() {
+            const config = document.getElementById('config-editor').value;
+            
+            // Encode config to base64 for URL
+            const encodedConfig = btoa(encodeURIComponent(config));
+            
+            // Create shareable URL
+            const shareUrl = window.location.origin + window.location.pathname + '?config=' + encodedConfig;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                const msg = document.getElementById('share-msg');
+                msg.style.opacity = '1';
+                setTimeout(() => { msg.style.opacity = '0'; }, 3000);
+            }).catch(err => {
+                console.error('Clipboard error:', err);
+                alert('Link konnte nicht in die Zwischenablage kopiert werden. Bitte kopieren Sie ihn manuell:\n\n' + shareUrl);
+            });
+        }
+
+        // Merge two markdown configs with duplicate detection
+        function mergeConfigs(existingMarkdown, newMarkdown) {
+            const existingData = parseMarkdown(existingMarkdown);
+            const newData = parseMarkdown(newMarkdown);
+            
+            // Merge categories
+            Object.keys(newData).forEach(category => {
+                if (existingData[category]) {
+                    // Category exists - merge vocabularies and avoid duplicates
+                    const existingVocabs = existingData[category];
+                    const newVocabs = newData[category];
+                    
+                    newVocabs.forEach(newVocab => {
+                        // Check if vocabulary already exists (same question and answer)
+                        const isDuplicate = existingVocabs.some(v => 
+                            v.q.toLowerCase() === newVocab.q.toLowerCase() &&
+                            v.a.toLowerCase() === newVocab.a.toLowerCase()
+                        );
+                        
+                        if (!isDuplicate) {
+                            existingData[category].push(newVocab);
+                        }
+                    });
+                } else {
+                    // New category - add it
+                    existingData[category] = newData[category];
+                }
+            });
+            
+            // Convert back to markdown
+            let mergedMarkdown = '# Vokabel-Datenbank\n\n';
+            mergedMarkdown += 'Hier können neue Vokabeln hinzugefügt werden.\n';
+            mergedMarkdown += 'Format: "- Fremdwort : Übersetzung"\n';
+            mergedMarkdown += 'Neue Kategorien starten mit "##".\n\n';
+            
+            Object.keys(existingData).forEach(category => {
+                mergedMarkdown += `## ${category}\n`;
+                existingData[category].forEach(vocab => {
+                    mergedMarkdown += `- ${vocab.q} : ${vocab.a}\n`;
+                });
+                mergedMarkdown += '\n';
+            });
+            
+            return mergedMarkdown;
+        }
+
+        // Import config from URL parameter
+        let pendingImportConfig = null;
+        
+        function checkForSharedConfig() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedConfig = urlParams.get('config');
+            
+            if (encodedConfig) {
+                try {
+                    // Decode config from base64 with validation
+                    const base64Decoded = atob(encodedConfig);
+                    const decodedConfig = decodeURIComponent(base64Decoded);
+                    
+                    // Validate that decoded config is not empty
+                    if (!decodedConfig || decodedConfig.trim().length === 0) {
+                        throw new Error('Leere Konfiguration');
+                    }
+                    
+                    pendingImportConfig = decodedConfig;
+                    
+                    // Show import dialog
+                    document.getElementById('import-dialog').classList.remove('hidden');
+                } catch (err) {
+                    console.error('Fehler beim Dekodieren der Konfiguration:', err);
+                    alert('Der geteilte Link ist beschädigt oder ungültig. Bitte überprüfen Sie den Link und versuchen Sie es erneut.');
+                }
+            }
+        }
+
+        function importConfig(mode) {
+            if (!pendingImportConfig) return;
+            
+            if (mode === 'replace') {
+                // Replace existing config
+                document.getElementById('config-editor').value = pendingImportConfig;
+            } else if (mode === 'append') {
+                // Merge with existing config
+                const existingConfig = document.getElementById('config-editor').value;
+                const mergedConfig = mergeConfigs(existingConfig, pendingImportConfig);
+                document.getElementById('config-editor').value = mergedConfig;
+            }
+            
+            // Save and reload
+            saveConfig();
+            
+            // Close dialog and clear URL parameter
+            closeImportDialog();
+            
+            // Clear URL parameter without reloading page
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        function closeImportDialog() {
+            document.getElementById('import-dialog').classList.add('hidden');
+            pendingImportConfig = null;
+        }
+
+        // --- DARK MODE TOGGLE ---
+        function initDarkModeToggle() {
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+            const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+            // Show the correct icon based on current theme
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                themeToggleLightIcon.classList.remove('hidden');
+            } else {
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+
+            themeToggleBtn.addEventListener('click', function() {
+                // Toggle icons
+                themeToggleDarkIcon.classList.toggle('hidden');
+                themeToggleLightIcon.classList.toggle('hidden');
+
+                // Toggle dark mode
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.theme = 'light';
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.theme = 'dark';
+                }
+            });
+        }
+
+        // --- START ---
+        initApp();
+        initDarkModeToggle();
+        
+        // Check for shared config on load
+        checkForSharedConfig();
+
+    </script>
+</body>
+</html>
