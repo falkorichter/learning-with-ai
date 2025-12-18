@@ -117,19 +117,19 @@
             <div class="flex-grow flex flex-col justify-center items-center min-h-[300px]">
                 
                 <!-- Karte -->
-                <div class="group w-full max-w-sm h-64 perspective-1000 cursor-pointer" onclick="flipCard()">
+                <div id="flashcard-container" class="group w-full max-w-sm h-64 perspective-1000 cursor-pointer">
                     <div id="flashcard-inner" class="card-inner relative w-full h-full text-center transform-style-3d shadow-xl rounded-2xl">
                         
                         <!-- Vorderseite (Frage/Fremdsprache) -->
                         <div class="absolute w-full h-full backface-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 dark:from-indigo-600 dark:to-indigo-800 text-white rounded-2xl flex flex-col justify-center items-center p-6">
-                            <span class="text-sm opacity-75 uppercase tracking-wider mb-2 font-semibold">Englisch</span>
+                            <span class="text-sm opacity-75 uppercase tracking-wider mb-2 font-semibold">Wort</span>
                             <h2 id="card-front" class="text-3xl font-bold break-words">Loading...</h2>
                             <div class="mt-4 text-xs bg-white/20 px-3 py-1 rounded-full">Klicken zum Umdrehen</div>
                         </div>
 
                         <!-- Rückseite (Antwort/Deutsch) -->
                         <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-2xl border-2 border-indigo-100 dark:border-indigo-600 flex flex-col justify-center items-center p-6">
-                            <span class="text-sm text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-2 font-semibold">Deutsch</span>
+                            <span class="text-sm text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-2 font-semibold">Bedeutung</span>
                             <h2 id="card-back" class="text-3xl font-bold break-words text-indigo-900 dark:text-indigo-200">...</h2>
                         </div>
                     </div>
@@ -137,8 +137,21 @@
 
                 <!-- Speak Button -->
                 <div class="mt-6">
-                    <button onclick="speakCurrentCard()" class="bg-emerald-500 dark:bg-emerald-600 hover:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition active:scale-95 flex items-center gap-2 mx-auto">
-                        <i class="fa-solid fa-volume-high"></i> Pronounce English
+                    <button id="speak-card-btn" class="bg-emerald-500 dark:bg-emerald-600 hover:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition active:scale-95 flex items-center gap-2 mx-auto">
+                        <i class="fa-solid fa-volume-high"></i> Aussprechen
+                    </button>
+                </div>
+
+                <!-- Language Selection -->
+                <div class="mt-4 flex justify-center gap-2">
+                    <button class="language-btn text-xs font-semibold py-1 px-3 rounded-lg transition" data-lang="en-US">
+                        🇬🇧 Englisch
+                    </button>
+                    <button class="language-btn text-xs font-semibold py-1 px-3 rounded-lg transition" data-lang="fr-FR">
+                        🇫🇷 Französisch
+                    </button>
+                    <button class="language-btn text-xs font-semibold py-1 px-3 rounded-lg transition" data-lang="es-ES">
+                        🇪🇸 Spanisch
                     </button>
                 </div>
 
@@ -169,7 +182,7 @@
                 </div>
 
                 <div class="py-8 text-center">
-                    <span class="block text-slate-500 dark:text-slate-400 text-sm mb-2">Wie sagt man auf Englisch:</span>
+                    <span class="block text-slate-500 dark:text-slate-400 text-sm mb-2">Welches Wort passt zur Bedeutung:</span>
                     <h2 id="quiz-question" class="text-3xl font-extrabold text-slate-800 dark:text-slate-100">
                         Loading...
                     </h2>
@@ -265,7 +278,7 @@
         const defaultMarkdown = `# Vokabel-Datenbank
 
 Hier können neue Vokabeln hinzugefügt werden.
-Format: "- Fremdwort : Übersetzung"
+Format: "- Wort : Bedeutung"
 Neue Kategorien starten mit "##".
 
 ## Haare (Hair)
@@ -374,6 +387,9 @@ Neue Kategorien starten mit "##".
         let quizScore = 0;
         let quizAttempts = 0;
         
+        // TTS Language State
+        let ttsLanguage = 'en-US'; // Default to English
+        
         // --- HTML Escaping Function ---
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -382,20 +398,42 @@ Neue Kategorien starten mit "##".
         }
         
         // --- Text-to-Speech Function ---
-        function speakText(text) {
+        function speakText(text, language = null) {
             if ('speechSynthesis' in window) {
                 // Cancel any ongoing speech
                 window.speechSynthesis.cancel();
                 
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US'; // Set language to English
+                utterance.lang = language || ttsLanguage; // Use specified language or default
                 utterance.rate = 0.9; // Slightly slower for learning
                 utterance.pitch = 1;
                 
                 window.speechSynthesis.speak(utterance);
             } else {
-                alert('Text-to-Speech is not supported in your browser.');
+                alert('Text-to-Speech wird in Ihrem Browser nicht unterstützt.');
             }
+        }
+        
+        // Set TTS Language
+        function setTTSLanguage(lang) {
+            ttsLanguage = lang;
+            localStorage.setItem('ttsLanguage', lang);
+            updateLanguageButtons();
+        }
+        
+        // Update language button styles
+        function updateLanguageButtons() {
+            const buttons = document.querySelectorAll('.language-btn');
+            buttons.forEach(btn => {
+                const btnLang = btn.getAttribute('data-lang');
+                if (btnLang === ttsLanguage) {
+                    btn.classList.add('bg-indigo-600', 'text-white');
+                    btn.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-200');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                    btn.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-200');
+                }
+            });
         }
         
         // --- 3. PARSER (Kern-Logik) ---
@@ -726,7 +764,7 @@ Neue Kategorien starten mit "##".
             // Convert back to markdown
             let mergedMarkdown = '# Vokabel-Datenbank\n\n';
             mergedMarkdown += 'Hier können neue Vokabeln hinzugefügt werden.\n';
-            mergedMarkdown += 'Format: "- Fremdwort : Übersetzung"\n';
+            mergedMarkdown += 'Format: "- Wort : Bedeutung"\n';
             mergedMarkdown += 'Neue Kategorien starten mit "##".\n\n';
             
             Object.keys(existingData).forEach(category => {
@@ -1003,6 +1041,24 @@ Neue Kategorien starten mit "##".
         // --- START ---
         initApp();
         initDarkModeToggle();
+        
+        // Add event listeners for flashcard and speak button
+        document.getElementById('flashcard-container').addEventListener('click', flipCard);
+        document.getElementById('speak-card-btn').addEventListener('click', speakCurrentCard);
+        
+        // Add event listeners for language selection buttons
+        document.querySelectorAll('.language-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setTTSLanguage(btn.getAttribute('data-lang'));
+            });
+        });
+        
+        // Load saved TTS language preference
+        const savedLang = localStorage.getItem('ttsLanguage');
+        if (savedLang) {
+            ttsLanguage = savedLang;
+        }
+        updateLanguageButtons();
         
         // Check for shared config on load
         checkForSharedConfig();
