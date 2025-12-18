@@ -63,6 +63,17 @@
         .dark .custom-scroll::-webkit-scrollbar-thumb:hover {
             background: #64748b;
         }
+        
+        /* Line numbers styling */
+        #line-numbers {
+            user-select: none;
+            pointer-events: none;
+        }
+        #line-numbers-content > div {
+            height: 20px;
+            line-height: 20px;
+            padding-right: 4px;
+        }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden transition-colors duration-300">
@@ -204,11 +215,19 @@
                 </div>
             </div>
             
-            <div class="flex-grow relative border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden transition-colors duration-300">
-                <textarea id="config-editor" class="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 transition-colors duration-300" spellcheck="false"></textarea>
+            <div class="flex-grow relative border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden transition-colors duration-300 flex">
+                <!-- Line numbers and error indicators -->
+                <div id="line-numbers" class="flex-shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-right font-mono text-sm select-none overflow-hidden transition-colors duration-300" style="width: 50px; padding: 16px 8px;">
+                    <div id="line-numbers-content"></div>
+                </div>
+                <!-- Textarea -->
+                <textarea id="config-editor" class="flex-grow p-4 pl-2 font-mono text-sm resize-none focus:outline-none bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 transition-colors duration-300" spellcheck="false" style="padding-left: 8px;"></textarea>
             </div>
 
             <div class="mt-4 flex gap-3">
+                <button onclick="validateConfigOnly()" class="bg-yellow-500 dark:bg-yellow-600 hover:bg-yellow-600 dark:hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check-circle"></i> Validieren
+                </button>
                 <button onclick="saveConfig()" class="flex-1 bg-green-600 dark:bg-green-700 hover:bg-green-700 dark:hover:bg-green-800 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-save"></i> Speichern & Laden
                 </button>
@@ -217,11 +236,32 @@
                 </button>
             </div>
             
+            <div id="validation-success-msg" class="text-center text-green-600 dark:text-green-400 text-sm mt-2 opacity-0 transition-opacity">
+                ✓ Alle Zeilen sind valide und können geteilt werden!
+            </div>
+            
             <div id="save-msg" class="text-center text-green-600 dark:text-green-400 text-sm mt-2 opacity-0 transition-opacity">
                 Konfiguration gespeichert!
             </div>
             <div id="share-msg" class="text-center text-indigo-600 text-sm mt-2 opacity-0 transition-opacity">
                 Link in Zwischenablage kopiert!
+            </div>
+            
+            <!-- Validation Errors Display -->
+            <div id="validation-errors" class="hidden mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg max-h-64 overflow-y-auto custom-scroll">
+                <div class="flex items-start gap-2 mb-2">
+                    <i class="fa-solid fa-exclamation-triangle text-yellow-600 dark:text-yellow-500 mt-1"></i>
+                    <div class="flex-grow">
+                        <h3 class="font-bold text-yellow-800 dark:text-yellow-300">Validierungsfehler gefunden!</h3>
+                        <p class="text-sm text-yellow-700 dark:text-yellow-400 mb-2">Die folgenden Zeilen entsprechen nicht dem erwarteten Format "- Fremdwort : Übersetzung":</p>
+                        <div id="validation-error-list" class="space-y-2 text-sm">
+                            <!-- Errors will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+                <button onclick="hideValidationErrors()" class="mt-2 text-xs text-yellow-700 dark:text-yellow-400 underline hover:text-yellow-900 dark:hover:text-yellow-200">
+                    Schließen
+                </button>
             </div>
         </div>
 
@@ -409,6 +449,79 @@ Neue Kategorien starten mit "##".
             return data;
         }
 
+        // Validate markdown format and return list of invalid lines
+        function validateMarkdown(text) {
+            const lines = text.split('\n');
+            const errors = [];
+            let lineNumber = 0;
+            let inCategory = false;
+
+            lines.forEach(line => {
+                lineNumber++;
+                const trimmed = line.trim();
+                
+                // Leere Zeilen sind ok
+                if (!trimmed) return;
+                
+                // Titel (# oder etwas anderes außer ##) sind ok
+                if (trimmed.startsWith('# ') || (trimmed.startsWith('#') && !trimmed.startsWith('##'))) return;
+                
+                // Kategorie (##) ist ok
+                if (trimmed.startsWith('##')) {
+                    inCategory = true;
+                    return;
+                }
+                
+                // Zeilen die mit - starten sollten Vokabeln sein
+                if (trimmed.startsWith('-')) {
+                    const content = trimmed.substring(1);
+                    
+                    // Prüfe ob ein Doppelpunkt vorhanden ist
+                    if (!content.includes(':')) {
+                        errors.push({
+                            line: lineNumber,
+                            text: line,
+                            error: 'Fehlt Doppelpunkt (:) zur Trennung von Fremdwort und Übersetzung'
+                        });
+                        return;
+                    }
+                    
+                    const parts = content.split(':');
+                    const question = parts[0].trim();
+                    const answer = parts.slice(1).join(':').trim();
+                    
+                    // Prüfe ob beide Teile nicht leer sind
+                    if (!question) {
+                        errors.push({
+                            line: lineNumber,
+                            text: line,
+                            error: 'Fremdwort (vor dem Doppelpunkt) ist leer'
+                        });
+                    }
+                    if (!answer) {
+                        errors.push({
+                            line: lineNumber,
+                            text: line,
+                            error: 'Übersetzung (nach dem Doppelpunkt) ist leer'
+                        });
+                    }
+                    
+                    return;
+                }
+                
+                // Andere Zeilen sind möglicherweise ungültig (außer beschreibende Texte am Anfang)
+                if (inCategory) {
+                    errors.push({
+                        line: lineNumber,
+                        text: line,
+                        error: 'Zeile beginnt nicht mit "-" (sollte eine Vokabel sein) oder "##" (neue Kategorie)'
+                    });
+                }
+            });
+
+            return errors;
+        }
+
         // --- 4. INITIALISIERUNG ---
         function initApp() {
             // Versuche Daten aus LocalStorage zu laden, sonst Default
@@ -576,6 +689,18 @@ Neue Kategorien starten mit "##".
         function saveConfig() {
             const newConfig = document.getElementById('config-editor').value;
             
+            // Validate the configuration first
+            const validationErrors = validateMarkdown(newConfig);
+            
+            if (validationErrors.length > 0) {
+                // Show validation errors
+                showValidationErrors(validationErrors);
+                return; // Don't save if there are errors
+            }
+            
+            // Hide validation errors if previously shown
+            hideValidationErrors();
+            
             // Speichern
             localStorage.setItem('vocabConfig', newConfig);
             
@@ -603,6 +728,54 @@ Neue Kategorien starten mit "##".
             msg.style.opacity = '1';
             setTimeout(() => { msg.style.opacity = '0'; }, 2000);
         }
+        
+        function showValidationErrors(errors) {
+            const container = document.getElementById('validation-errors');
+            const errorList = document.getElementById('validation-error-list');
+            
+            // Store errors globally for line number display
+            currentValidationErrors = errors;
+            updateLineNumbers();
+            
+            errorList.innerHTML = '';
+            
+            errors.forEach(error => {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bg-white dark:bg-slate-800 p-2 rounded border border-yellow-200 dark:border-yellow-800';
+                errorDiv.innerHTML = `
+                    <div class="font-mono text-xs text-slate-600 dark:text-slate-400">Zeile ${error.line}:</div>
+                    <div class="font-mono text-xs bg-slate-100 dark:bg-slate-900 p-1 rounded mt-1 text-slate-800 dark:text-slate-300">${error.text}</div>
+                    <div class="text-xs text-yellow-700 dark:text-yellow-400 mt-1"><i class="fa-solid fa-arrow-right"></i> ${error.error}</div>
+                `;
+                errorList.appendChild(errorDiv);
+            });
+            
+            container.classList.remove('hidden');
+        }
+        
+        function hideValidationErrors() {
+            document.getElementById('validation-errors').classList.add('hidden');
+            // Clear errors from line numbers
+            currentValidationErrors = [];
+            updateLineNumbers();
+        }
+        
+        function validateConfigOnly() {
+            const config = document.getElementById('config-editor').value;
+            const validationErrors = validateMarkdown(config);
+            
+            if (validationErrors.length > 0) {
+                showValidationErrors(validationErrors);
+                // Hide success message
+                document.getElementById('validation-success-msg').style.opacity = '0';
+            } else {
+                hideValidationErrors();
+                // Show success message
+                const msg = document.getElementById('validation-success-msg');
+                msg.style.opacity = '1';
+                setTimeout(() => { msg.style.opacity = '0'; }, 3000);
+            }
+        }
 
         function resetToDefault() {
             if(confirm("Wirklich auf Standard-Vokabeln zurücksetzen? Deine Änderungen gehen verloren.")) {
@@ -616,6 +789,14 @@ Neue Kategorien starten mit "##".
         // Share config via URL
         function shareConfig() {
             const config = document.getElementById('config-editor').value;
+            
+            // Validate before sharing
+            const validationErrors = validateMarkdown(config);
+            if (validationErrors.length > 0) {
+                showValidationErrors(validationErrors);
+                alert('Die Konfiguration enthält Fehler und kann nicht geteilt werden. Bitte korrigiere die markierten Zeilen.');
+                return;
+            }
             
             // Encode config to base64 for URL
             const encodedConfig = btoa(encodeURIComponent(config));
@@ -904,9 +1085,58 @@ Neue Kategorien starten mit "##".
             });
         }
 
+        // --- LINE NUMBERS AND ERROR INDICATORS ---
+        let currentValidationErrors = [];
+        
+        function updateLineNumbers() {
+            const editor = document.getElementById('config-editor');
+            const lineNumbersContent = document.getElementById('line-numbers-content');
+            
+            if (!editor || !lineNumbersContent) return;
+            
+            const lines = editor.value.split('\n');
+            const lineCount = lines.length;
+            
+            // Create line numbers with error indicators
+            let html = '';
+            for (let i = 1; i <= lineCount; i++) {
+                const hasError = currentValidationErrors.some(err => err.line === i);
+                const errorClass = hasError ? 'text-red-600 dark:text-red-400 font-bold' : '';
+                const errorIcon = hasError ? '<i class="fa-solid fa-circle-exclamation text-xs"></i> ' : '';
+                html += `<div class="leading-5 ${errorClass}" title="${hasError ? 'Fehler in dieser Zeile' : ''}">${errorIcon}${i}</div>`;
+            }
+            
+            lineNumbersContent.innerHTML = html;
+        }
+        
+        function syncScroll() {
+            const editor = document.getElementById('config-editor');
+            const lineNumbers = document.getElementById('line-numbers');
+            
+            if (editor && lineNumbers) {
+                lineNumbers.scrollTop = editor.scrollTop;
+            }
+        }
+        
+        function initLineNumberEditor() {
+            const editor = document.getElementById('config-editor');
+            
+            if (!editor) return;
+            
+            // Update line numbers on input
+            editor.addEventListener('input', updateLineNumbers);
+            
+            // Sync scroll
+            editor.addEventListener('scroll', syncScroll);
+            
+            // Initial update
+            updateLineNumbers();
+        }
+
         // --- START ---
         initApp();
         initDarkModeToggle();
+        initLineNumberEditor();
         
         // Check for shared config on load
         checkForSharedConfig();
