@@ -23,6 +23,9 @@
     <!-- Babel Standalone for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
+    <!-- Quiz Logic Module -->
+    <script src="../src/quiz-logic.js"></script>
+    
     <style>
         @keyframes fade-in {
             from { opacity: 0; }
@@ -200,33 +203,8 @@
                 ]
             };
 
-            // Minimum number of words required in a category to generate quiz within that category only
-            const MIN_CATEGORY_SIZE = 4;
-
-            // Hilfsfunktion: Alle Vokabeln in eine flache Liste für das Quiz
-            const getAllVocabs = () => {
-                let all = [];
-                Object.values(vocabCategories).forEach(list => {
-                    all = [...all, ...list];
-                });
-                return all;
-            };
-
-            // Hilfsfunktion: Get all vocabs with their category information
-            const getAllVocabsWithCategory = () => {
-                let all = [];
-                Object.entries(vocabCategories).forEach(([category, list]) => {
-                    list.forEach(vocab => {
-                        all.push({ ...vocab, category });
-                    });
-                });
-                return all;
-            };
-
-            // Hilfsfunktion: Get vocabs from a specific category
-            const getVocabsFromCategory = (category) => {
-                return vocabCategories[category] || [];
-            };
+            // Use the shared quiz logic module
+            const { generateQuizQuestion: generateQuizQuestionShared } = window.QuizLogic;
 
             // Quiz State
             const [quizItem, setQuizItem] = useState(null);
@@ -238,41 +216,15 @@
 
             // Neues Quiz generieren
             const generateQuestion = () => {
-                // Get all vocabs with category information
-                const allVocabsWithCategory = getAllVocabsWithCategory();
+                // Use the shared quiz logic module
+                const quiz = generateQuizQuestionShared(vocabCategories, 'en');
                 
-                // Select random target word
-                const randomTarget = allVocabsWithCategory[Math.floor(Math.random() * allVocabsWithCategory.length)];
-                
-                // Get vocabs from the same category
-                const categoryVocabs = getVocabsFromCategory(randomTarget.category);
-                
-                // Determine which pool to use for distractors
-                let vocabPool;
-                if (categoryVocabs.length < MIN_CATEGORY_SIZE) {
-                    // If category has less than MIN_CATEGORY_SIZE words, use all words
-                    vocabPool = getAllVocabs();
-                } else {
-                    // Use only words from the same category
-                    vocabPool = categoryVocabs;
+                if (quiz) {
+                    setQuizItem(quiz.target);
+                    setOptions(quiz.options);
+                    setSelectedOption(null);
+                    setIsCorrect(null);
                 }
-                
-                // Select 3 wrong options (distractors)
-                let distractors = [];
-                while (distractors.length < 3) {
-                    const randomDistractor = vocabPool[Math.floor(Math.random() * vocabPool.length)];
-                    if (randomDistractor.en !== randomTarget.en && !distractors.includes(randomDistractor)) {
-                        distractors.push(randomDistractor);
-                    }
-                }
-
-                // Mischen
-                const quizOptions = [...distractors, randomTarget].sort(() => Math.random() - 0.5);
-
-                setQuizItem(randomTarget);
-                setOptions(quizOptions);
-                setSelectedOption(null);
-                setIsCorrect(null);
             };
 
             useEffect(() => {
