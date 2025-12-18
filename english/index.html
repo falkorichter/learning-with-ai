@@ -200,6 +200,9 @@
                 ]
             };
 
+            // Minimum number of words required in a category to generate quiz within that category only
+            const MIN_CATEGORY_SIZE = 4;
+
             // Hilfsfunktion: Alle Vokabeln in eine flache Liste für das Quiz
             const getAllVocabs = () => {
                 let all = [];
@@ -246,8 +249,8 @@
                 
                 // Determine which pool to use for distractors
                 let vocabPool;
-                if (categoryVocabs.length < 4) {
-                    // If category has less than 4 words, use all words
+                if (categoryVocabs.length < MIN_CATEGORY_SIZE) {
+                    // If category has less than MIN_CATEGORY_SIZE words, use all words
                     vocabPool = getAllVocabs();
                 } else {
                     // Use only words from the same category
