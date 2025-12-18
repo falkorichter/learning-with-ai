@@ -20,7 +20,28 @@ This feature is powered by the [PR Preview Action](https://github.com/marketplac
 
 ## Development
 
-Simply edit the HTML files and create a pull request. Your changes will be automatically deployed to a preview URL for review.
+### Setup
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Build the CSS (required after any Tailwind class changes):
+   ```bash
+   npm run build:css
+   ```
+
+3. For development with auto-rebuild on changes:
+   ```bash
+   npm run watch:css
+   ```
+
+### Making Changes
+
+- Edit the HTML files directly
+- If you add new Tailwind CSS classes, run `npm run build:css` to regenerate the CSS
+- Create a pull request - your changes will be automatically deployed to a preview URL for review
 
 ## Live Site
 

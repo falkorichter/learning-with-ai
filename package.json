@@ -1,0 +1,17 @@
+{
+  "name": "learning-with-ai",
+  "version": "1.0.0",
+  "description": "Interactive learning tools and vocabulary trainers hosted on GitHub Pages.",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i src/input.css -o dist/output.css --minify",
+    "watch:css": "tailwindcss -i src/input.css -o dist/output.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}
