@@ -86,9 +86,11 @@ function generateQuizQuestion(vocabData, questionField = 'en') {
     }
     
     // If we don't have enough distractors (less than 4 total vocabs), pad with placeholders
+    // This is an edge case that only occurs when there are fewer than 4 total words
     while (distractors.length < 3) {
         const placeholder = {};
-        placeholder[questionField] = `Option ${distractors.length + 1}`;
+        // Create numbered placeholder: "Option 1", "Option 2", etc.
+        placeholder[questionField] = `Placeholder ${distractors.length + 1}`;
         distractors.push(placeholder);
     }
     
