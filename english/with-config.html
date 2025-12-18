@@ -5,13 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamischer Vokabeltrainer</title>
     <!-- Tailwind CSS -->
-    <script>
-        // Tailwind config must be set before loading Tailwind
-        window.tailwindConfig = {
-            darkMode: 'class'
-        }
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../dist/output.css">
     <script>
         // Dark mode initialization - must run before page renders
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
