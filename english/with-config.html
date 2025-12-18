@@ -135,8 +135,15 @@
                     </div>
                 </div>
 
+                <!-- Speak Button -->
+                <div class="mt-6">
+                    <button onclick="speakCurrentCard()" class="bg-emerald-500 dark:bg-emerald-600 hover:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition active:scale-95 flex items-center gap-2 mx-auto">
+                        <i class="fa-solid fa-volume-high"></i> Pronounce English
+                    </button>
+                </div>
+
                 <!-- Controls -->
-                <div class="flex gap-4 mt-8 w-full max-w-sm justify-between">
+                <div class="flex gap-4 mt-4 w-full max-w-sm justify-between">
                     <button onclick="prevCard()" class="flex-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold py-3 px-4 rounded-lg transition active:scale-95">
                         <i class="fa-solid fa-arrow-left"></i> Zurück
                     </button>
@@ -367,6 +374,23 @@ Neue Kategorien starten mit "##".
         let quizScore = 0;
         let quizAttempts = 0;
         
+        // --- Text-to-Speech Function ---
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; // Set language to English
+                utterance.rate = 0.9; // Slightly slower for learning
+                utterance.pitch = 1;
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Text-to-Speech is not supported in your browser.');
+            }
+        }
+        
         // --- 3. PARSER (Kern-Logik) ---
         function parseMarkdown(text) {
             const lines = text.split('\n');
@@ -472,6 +496,14 @@ Neue Kategorien starten mit "##".
             document.getElementById('card-counter').innerText = `${currentCardIndex + 1} / ${cards.length}`;
         }
 
+        function speakCurrentCard() {
+            if (!currentCategory || !vocabData[currentCategory]) return;
+            const cards = vocabData[currentCategory];
+            if (cards.length === 0) return;
+            const card = cards[currentCardIndex];
+            speakText(card.q);
+        }
+
         function flipCard() {
             const cardInner = document.getElementById('flashcard-inner');
             isFlipped = !isFlipped;
@@ -550,7 +582,12 @@ Neue Kategorien starten mit "##".
                     const row = document.createElement('div');
                     row.className = "vocab-item bg-white dark:bg-slate-700 p-3 rounded shadow-sm border border-slate-100 dark:border-slate-600 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors duration-200";
                     row.innerHTML = `
-                        <span class="font-semibold text-slate-700 dark:text-slate-200">${item.q}</span>
+                        <div class="flex items-center gap-2 flex-1">
+                            <span class="font-semibold text-slate-700 dark:text-slate-200">${item.q}</span>
+                            <button onclick="speakText('${item.q.replace(/'/g, "\\'")}')" class="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800 text-indigo-600 dark:text-indigo-400 transition-colors" title="Pronounce">
+                                <i class="fa-solid fa-volume-high text-sm"></i>
+                            </button>
+                        </div>
                         <span class="text-slate-500 dark:text-slate-400"><i class="fa-solid fa-arrow-right text-xs mx-2 text-slate-300 dark:text-slate-600"></i> ${item.a}</span>
                     `;
                     container.appendChild(row);
@@ -800,7 +837,12 @@ Neue Kategorien starten mit "##".
                 
                 button.innerHTML = `
                     <div class="flex items-center justify-between">
-                        <span>${option.q}</span>
+                        <div class="flex items-center gap-2">
+                            <span>${option.q}</span>
+                            <button onclick="event.stopPropagation(); speakText('${option.q.replace(/'/g, "\\'")}')" class="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Pronounce ${option.q}">
+                                <i class="fa-solid fa-volume-high text-sm"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
                 
@@ -837,7 +879,12 @@ Neue Kategorien starten mit "##".
                     button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-green-100 dark:bg-green-900 border-green-500 dark:border-green-600 text-green-800 dark:text-green-200 shadow-md';
                     button.innerHTML = `
                         <div class="flex items-center justify-between">
-                            <span>${opt.q}</span>
+                            <div class="flex items-center gap-2">
+                                <span>${opt.q}</span>
+                                <button onclick="event.stopPropagation(); speakText('${opt.q.replace(/'/g, "\\'")}')" class="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Pronounce ${opt.q}">
+                                    <i class="fa-solid fa-volume-high text-sm"></i>
+                                </button>
+                            </div>
                             <i class="fa-solid fa-circle-check text-xl"></i>
                         </div>
                     `;
@@ -846,13 +893,28 @@ Neue Kategorien starten mit "##".
                     button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-red-100 dark:bg-red-900 border-red-500 dark:border-red-600 text-red-800 dark:text-red-200';
                     button.innerHTML = `
                         <div class="flex items-center justify-between">
-                            <span>${opt.q}</span>
+                            <div class="flex items-center gap-2">
+                                <span>${opt.q}</span>
+                                <button onclick="event.stopPropagation(); speakText('${opt.q.replace(/'/g, "\\'")}')" class="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Pronounce ${opt.q}">
+                                    <i class="fa-solid fa-volume-high text-sm"></i>
+                                </button>
+                            </div>
                             <i class="fa-solid fa-circle-xmark text-xl"></i>
                         </div>
                     `;
                 } else {
                     // Not selected - fade out
                     button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 opacity-50';
+                    button.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span>${opt.q}</span>
+                                <button onclick="event.stopPropagation(); speakText('${opt.q.replace(/'/g, "\\'")}')" class="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors" title="Pronounce ${opt.q}">
+                                    <i class="fa-solid fa-volume-high text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
                 }
             });
             
