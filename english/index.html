@@ -209,6 +209,22 @@
                 return all;
             };
 
+            // Hilfsfunktion: Get all vocabs with their category information
+            const getAllVocabsWithCategory = () => {
+                let all = [];
+                Object.entries(vocabCategories).forEach(([category, list]) => {
+                    list.forEach(vocab => {
+                        all.push({ ...vocab, category });
+                    });
+                });
+                return all;
+            };
+
+            // Hilfsfunktion: Get vocabs from a specific category
+            const getVocabsFromCategory = (category) => {
+                return vocabCategories[category] || [];
+            };
+
             // Quiz State
             const [quizItem, setQuizItem] = useState(null);
             const [options, setOptions] = useState([]);
@@ -219,14 +235,29 @@
 
             // Neues Quiz generieren
             const generateQuestion = () => {
-                const allVocabs = getAllVocabs();
-                // Zufälliges Wort auswählen
-                const randomTarget = allVocabs[Math.floor(Math.random() * allVocabs.length)];
+                // Get all vocabs with category information
+                const allVocabsWithCategory = getAllVocabsWithCategory();
                 
-                // 3 falsche Optionen auswählen
+                // Select random target word
+                const randomTarget = allVocabsWithCategory[Math.floor(Math.random() * allVocabsWithCategory.length)];
+                
+                // Get vocabs from the same category
+                const categoryVocabs = getVocabsFromCategory(randomTarget.category);
+                
+                // Determine which pool to use for distractors
+                let vocabPool;
+                if (categoryVocabs.length < 4) {
+                    // If category has less than 4 words, use all words
+                    vocabPool = getAllVocabs();
+                } else {
+                    // Use only words from the same category
+                    vocabPool = categoryVocabs;
+                }
+                
+                // Select 3 wrong options (distractors)
                 let distractors = [];
                 while (distractors.length < 3) {
-                    const randomDistractor = allVocabs[Math.floor(Math.random() * allVocabs.length)];
+                    const randomDistractor = vocabPool[Math.floor(Math.random() * vocabPool.length)];
                     if (randomDistractor.en !== randomTarget.en && !distractors.includes(randomDistractor)) {
                         distractors.push(randomDistractor);
                     }

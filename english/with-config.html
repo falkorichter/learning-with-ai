@@ -1014,23 +1014,53 @@ Neue Kategorien starten mit "##".
             return all;
         }
         
+        // Get all vocabs with their category information
+        function getAllVocabsWithCategory() {
+            let all = [];
+            Object.entries(vocabData).forEach(([category, list]) => {
+                list.forEach(vocab => {
+                    all.push({ ...vocab, category });
+                });
+            });
+            return all;
+        }
+        
+        // Get vocabs from a specific category
+        function getVocabsFromCategory(category) {
+            return vocabData[category] || [];
+        }
+        
         // Generate a new quiz question
         function generateQuizQuestion() {
-            const allVocabs = getAllVocabs();
+            // Get all vocabs with category information
+            const allVocabsWithCategory = getAllVocabsWithCategory();
             
-            if (allVocabs.length === 0) {
+            if (allVocabsWithCategory.length === 0) {
                 document.getElementById('quiz-question').innerText = 'Keine Vokabeln verfügbar';
                 document.getElementById('quiz-options').innerHTML = '';
                 return;
             }
             
             // Select random target word
-            const randomTarget = allVocabs[Math.floor(Math.random() * allVocabs.length)];
+            const randomTarget = allVocabsWithCategory[Math.floor(Math.random() * allVocabsWithCategory.length)];
+            
+            // Get vocabs from the same category
+            const categoryVocabs = getVocabsFromCategory(randomTarget.category);
+            
+            // Determine which pool to use for distractors
+            let vocabPool;
+            if (categoryVocabs.length < 4) {
+                // If category has less than 4 words, use all words
+                vocabPool = getAllVocabs();
+            } else {
+                // Use only words from the same category
+                vocabPool = categoryVocabs;
+            }
             
             // Select 3 wrong options (distractors)
             let distractors = [];
-            while (distractors.length < 3 && allVocabs.length > 1) {
-                const randomDistractor = allVocabs[Math.floor(Math.random() * allVocabs.length)];
+            while (distractors.length < 3 && vocabPool.length > 1) {
+                const randomDistractor = vocabPool[Math.floor(Math.random() * vocabPool.length)];
                 if (randomDistractor.q !== randomTarget.q && !distractors.find(d => d.q === randomDistractor.q)) {
                     distractors.push(randomDistractor);
                 }
