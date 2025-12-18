@@ -59,23 +59,35 @@ This project uses a hybrid approach for external dependencies:
 #### Locally Built
 - **Tailwind CSS** - built from source and versioned in `/dist/output.css`
 
-#### Why Use CDN for React/Babel?
+#### Why Use CDN for External Libraries?
 
-**Decision**: Keep using CDN with proper CORS attributes
+**Decision**: Keep using CDN with proper CORS attributes for all external dependencies
 
 **Reasoning**:
+
+**For React/ReactDOM/Babel:**
 1. **Project Scope**: This is a learning tool with simple single-page apps using inline JSX
 2. **React Documentation**: [React's official docs](https://react.dev/learn/add-react-to-an-existing-project) state: "If you're learning React or experimenting, you can use React from a CDN"
 3. **Simplicity**: No build process needed for JavaScript - keeps contributing easy
 4. **Repository Size**: Avoids committing ~500KB of minified JavaScript
-5. **Safari Compatibility**: The `crossorigin="anonymous"` attribute resolves Safari's privacy warnings while maintaining CDN benefits
+
+**For Font Awesome & Google Fonts:**
+1. **Standard Practice**: Using CDNs for icon fonts and web fonts is industry standard
+2. **Performance**: Google Fonts CDN is optimized for font delivery with automatic format selection
+3. **Updates**: Font Awesome can be updated by changing version number in URL without committing large font files
+4. **Size**: Font Awesome is ~1MB with all font files - too large to version control for a simple app
+
+**For All CDN Resources:**
+- **Safari Compatibility**: The `crossorigin="anonymous"` attribute resolves Safari's privacy warnings while maintaining CDN benefits
+- **Reliability**: Using well-established CDNs (unpkg, cdnjs, Google Fonts) with high uptime
+- **Browser Caching**: Users may have these resources cached from other sites
 
 **Trade-offs Accepted**:
 - ❌ Requires internet connection for development
-- ❌ External dependency on CDN availability
-- ✅ Easier for contributors (no JS build step)
-- ✅ Smaller repository size
-- ✅ Faster load times via CDN caching
+- ❌ External dependency on CDN availability (mitigated by using reliable CDNs)
+- ✅ Easier for contributors (no build step, no large binary files)
+- ✅ Smaller repository size (~1.5MB savings)
+- ✅ Faster load times via CDN caching and geographic distribution
 
 #### When to Reconsider
 
@@ -86,10 +98,14 @@ Consider vendoring (hosting locally) if:
 - Need stricter security controls over dependencies
 
 To vendor the dependencies:
-1. Download the production builds from unpkg
+1. Download the production builds:
+   - React/ReactDOM/Babel from unpkg
+   - Font Awesome from cdnjs or npm package
+   - Google Fonts: Download font files and host locally
 2. Place them in a `/vendor` or `/lib` directory
-3. Update HTML `<script>` tags to reference local paths
-4. Consider adding Subresource Integrity (SRI) hashes for security
+3. Update HTML `<script>` and `<link>` tags to reference local paths
+4. For fonts, add `@font-face` declarations to your CSS
+5. Consider adding Subresource Integrity (SRI) hashes for security
 
 ## Live Site
 
