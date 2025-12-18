@@ -5,6 +5,10 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
+# Testing
+coverage/
+.jest-cache/
+
 # IDE
 .idea/
 .vscode/
