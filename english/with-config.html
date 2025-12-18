@@ -63,6 +63,17 @@
         .dark .custom-scroll::-webkit-scrollbar-thumb:hover {
             background: #64748b;
         }
+        
+        /* Line numbers styling */
+        #line-numbers {
+            user-select: none;
+            pointer-events: none;
+        }
+        #line-numbers-content > div {
+            height: 20px;
+            line-height: 20px;
+            padding-right: 4px;
+        }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden transition-colors duration-300">
@@ -204,8 +215,13 @@
                 </div>
             </div>
             
-            <div class="flex-grow relative border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden transition-colors duration-300">
-                <textarea id="config-editor" class="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 transition-colors duration-300" spellcheck="false"></textarea>
+            <div class="flex-grow relative border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden transition-colors duration-300 flex">
+                <!-- Line numbers and error indicators -->
+                <div id="line-numbers" class="flex-shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-right font-mono text-sm select-none overflow-hidden transition-colors duration-300" style="width: 50px; padding: 16px 8px;">
+                    <div id="line-numbers-content"></div>
+                </div>
+                <!-- Textarea -->
+                <textarea id="config-editor" class="flex-grow p-4 pl-2 font-mono text-sm resize-none focus:outline-none bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 transition-colors duration-300" spellcheck="false" style="padding-left: 8px;"></textarea>
             </div>
 
             <div class="mt-4 flex gap-3">
@@ -717,6 +733,10 @@ Neue Kategorien starten mit "##".
             const container = document.getElementById('validation-errors');
             const errorList = document.getElementById('validation-error-list');
             
+            // Store errors globally for line number display
+            currentValidationErrors = errors;
+            updateLineNumbers();
+            
             errorList.innerHTML = '';
             
             errors.forEach(error => {
@@ -735,6 +755,9 @@ Neue Kategorien starten mit "##".
         
         function hideValidationErrors() {
             document.getElementById('validation-errors').classList.add('hidden');
+            // Clear errors from line numbers
+            currentValidationErrors = [];
+            updateLineNumbers();
         }
         
         function validateConfigOnly() {
@@ -1062,9 +1085,58 @@ Neue Kategorien starten mit "##".
             });
         }
 
+        // --- LINE NUMBERS AND ERROR INDICATORS ---
+        let currentValidationErrors = [];
+        
+        function updateLineNumbers() {
+            const editor = document.getElementById('config-editor');
+            const lineNumbersContent = document.getElementById('line-numbers-content');
+            
+            if (!editor || !lineNumbersContent) return;
+            
+            const lines = editor.value.split('\n');
+            const lineCount = lines.length;
+            
+            // Create line numbers with error indicators
+            let html = '';
+            for (let i = 1; i <= lineCount; i++) {
+                const hasError = currentValidationErrors.some(err => err.line === i);
+                const errorClass = hasError ? 'text-red-600 dark:text-red-400 font-bold' : '';
+                const errorIcon = hasError ? '<i class="fa-solid fa-circle-exclamation text-xs"></i> ' : '';
+                html += `<div class="leading-5 ${errorClass}" title="${hasError ? 'Fehler in dieser Zeile' : ''}">${errorIcon}${i}</div>`;
+            }
+            
+            lineNumbersContent.innerHTML = html;
+        }
+        
+        function syncScroll() {
+            const editor = document.getElementById('config-editor');
+            const lineNumbers = document.getElementById('line-numbers');
+            
+            if (editor && lineNumbers) {
+                lineNumbers.scrollTop = editor.scrollTop;
+            }
+        }
+        
+        function initLineNumberEditor() {
+            const editor = document.getElementById('config-editor');
+            
+            if (!editor) return;
+            
+            // Update line numbers on input
+            editor.addEventListener('input', updateLineNumbers);
+            
+            // Sync scroll
+            editor.addEventListener('scroll', syncScroll);
+            
+            // Initial update
+            updateLineNumbers();
+        }
+
         // --- START ---
         initApp();
         initDarkModeToggle();
+        initLineNumberEditor();
         
         // Check for shared config on load
         checkForSharedConfig();
