@@ -128,26 +128,46 @@
             <div class="flex-grow flex flex-col justify-center items-center min-h-[300px]">
                 
                 <!-- Karte -->
-                <div class="group w-full max-w-sm h-64 perspective-1000 cursor-pointer" onclick="flipCard()">
+                <div id="flashcard-container" class="group w-full max-w-sm h-64 perspective-1000 cursor-pointer">
                     <div id="flashcard-inner" class="card-inner relative w-full h-full text-center transform-style-3d shadow-xl rounded-2xl">
                         
                         <!-- Vorderseite (Frage/Fremdsprache) -->
                         <div class="absolute w-full h-full backface-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 dark:from-indigo-600 dark:to-indigo-800 text-white rounded-2xl flex flex-col justify-center items-center p-6">
-                            <span class="text-sm opacity-75 uppercase tracking-wider mb-2 font-semibold">Englisch</span>
+                            <span class="text-sm opacity-75 uppercase tracking-wider mb-2 font-semibold">Wort</span>
                             <h2 id="card-front" class="text-3xl font-bold break-words">Loading...</h2>
                             <div class="mt-4 text-xs bg-white/20 px-3 py-1 rounded-full">Klicken zum Umdrehen</div>
                         </div>
 
                         <!-- Rückseite (Antwort/Deutsch) -->
                         <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-2xl border-2 border-indigo-100 dark:border-indigo-600 flex flex-col justify-center items-center p-6">
-                            <span class="text-sm text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-2 font-semibold">Deutsch</span>
+                            <span class="text-sm text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-2 font-semibold">Bedeutung</span>
                             <h2 id="card-back" class="text-3xl font-bold break-words text-indigo-900 dark:text-indigo-200">...</h2>
                         </div>
                     </div>
                 </div>
 
+                <!-- Speak Button -->
+                <div class="mt-6">
+                    <button id="speak-card-btn" class="bg-emerald-500 dark:bg-emerald-600 hover:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition active:scale-95 flex items-center gap-2 mx-auto">
+                        <i class="fa-solid fa-volume-high"></i> Aussprechen
+                    </button>
+                </div>
+
+                <!-- Language Selection -->
+                <div class="mt-4 flex justify-center gap-2">
+                    <button class="language-btn text-xs font-semibold py-1 px-3 rounded-lg transition" data-lang="en-US">
+                        🇬🇧 Englisch
+                    </button>
+                    <button class="language-btn text-xs font-semibold py-1 px-3 rounded-lg transition relative" data-lang="fr-FR">
+                        🇫🇷 Französisch <span class="ml-1 text-[10px] bg-orange-500 text-white px-1 rounded">BETA</span>
+                    </button>
+                    <button class="language-btn text-xs font-semibold py-1 px-3 rounded-lg transition relative" data-lang="es-ES">
+                        🇪🇸 Spanisch <span class="ml-1 text-[10px] bg-orange-500 text-white px-1 rounded">BETA</span>
+                    </button>
+                </div>
+
                 <!-- Controls -->
-                <div class="flex gap-4 mt-8 w-full max-w-sm justify-between">
+                <div class="flex gap-4 mt-4 w-full max-w-sm justify-between">
                     <button onclick="prevCard()" class="flex-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold py-3 px-4 rounded-lg transition active:scale-95">
                         <i class="fa-solid fa-arrow-left"></i> Zurück
                     </button>
@@ -173,7 +193,7 @@
                 </div>
 
                 <div class="py-8 text-center">
-                    <span class="block text-slate-500 dark:text-slate-400 text-sm mb-2">Wie sagt man auf Englisch:</span>
+                    <span class="block text-slate-500 dark:text-slate-400 text-sm mb-2">Welches Wort passt zur Bedeutung:</span>
                     <h2 id="quiz-question" class="text-3xl font-extrabold text-slate-800 dark:text-slate-100">
                         Loading...
                     </h2>
@@ -298,7 +318,7 @@
         const defaultMarkdown = `# Vokabel-Datenbank
 
 Hier können neue Vokabeln hinzugefügt werden.
-Format: "- Fremdwort : Übersetzung"
+Format: "- Wort : Bedeutung"
 Neue Kategorien starten mit "##".
 
 ## Haare (Hair)
@@ -406,6 +426,48 @@ Neue Kategorien starten mit "##".
         let selectedOption = null;
         let quizScore = 0;
         let quizAttempts = 0;
+        
+        // TTS Language State
+        let ttsLanguage = 'en-US'; // Default to English
+        
+        // --- Text-to-Speech Function ---
+        function speakText(text, language = null) {
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = language || ttsLanguage; // Use specified language or default
+                utterance.rate = 0.9; // Slightly slower for learning
+                utterance.pitch = 1;
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Text-to-Speech wird in Ihrem Browser nicht unterstützt.');
+            }
+        }
+        
+        // Set TTS Language
+        function setTTSLanguage(lang) {
+            ttsLanguage = lang;
+            localStorage.setItem('ttsLanguage', lang);
+            updateLanguageButtons();
+        }
+        
+        // Update language button styles
+        function updateLanguageButtons() {
+            const buttons = document.querySelectorAll('.language-btn');
+            buttons.forEach(btn => {
+                const btnLang = btn.getAttribute('data-lang');
+                if (btnLang === ttsLanguage) {
+                    btn.classList.add('bg-indigo-600', 'text-white');
+                    btn.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-200');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                    btn.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-200');
+                }
+            });
+        }
         
         // --- 3. PARSER (Kern-Logik) ---
         function parseMarkdown(text) {
@@ -585,6 +647,14 @@ Neue Kategorien starten mit "##".
             document.getElementById('card-counter').innerText = `${currentCardIndex + 1} / ${cards.length}`;
         }
 
+        function speakCurrentCard() {
+            if (!currentCategory || !vocabData[currentCategory]) return;
+            const cards = vocabData[currentCategory];
+            if (cards.length === 0) return;
+            const card = cards[currentCardIndex];
+            speakText(card.q);
+        }
+
         function flipCard() {
             const cardInner = document.getElementById('flashcard-inner');
             isFlipped = !isFlipped;
@@ -662,10 +732,31 @@ Neue Kategorien starten mit "##".
                 vocabData[cat].forEach(item => {
                     const row = document.createElement('div');
                     row.className = "vocab-item bg-white dark:bg-slate-700 p-3 rounded shadow-sm border border-slate-100 dark:border-slate-600 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors duration-200";
-                    row.innerHTML = `
-                        <span class="font-semibold text-slate-700 dark:text-slate-200">${item.q}</span>
-                        <span class="text-slate-500 dark:text-slate-400"><i class="fa-solid fa-arrow-right text-xs mx-2 text-slate-300 dark:text-slate-600"></i> ${item.a}</span>
-                    `;
+                    
+                    const leftDiv = document.createElement('div');
+                    leftDiv.className = "flex items-center gap-2 flex-1";
+                    
+                    const wordSpan = document.createElement('span');
+                    wordSpan.className = "font-semibold text-slate-700 dark:text-slate-200";
+                    wordSpan.textContent = item.q;
+                    
+                    const speakBtn = document.createElement('button');
+                    speakBtn.className = "p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800 text-indigo-600 dark:text-indigo-400 transition-colors";
+                    speakBtn.title = "Aussprechen";
+                    speakBtn.innerHTML = '<i class="fa-solid fa-volume-high text-sm"></i>';
+                    speakBtn.addEventListener('click', () => speakText(item.q));
+                    
+                    leftDiv.appendChild(wordSpan);
+                    leftDiv.appendChild(speakBtn);
+                    
+                    const rightSpan = document.createElement('span');
+                    rightSpan.className = "text-slate-500 dark:text-slate-400";
+                    rightSpan.innerHTML = '<i class="fa-solid fa-arrow-right text-xs mx-2 text-slate-300 dark:text-slate-600"></i>';
+                    const translationText = document.createTextNode(' ' + item.a);
+                    rightSpan.appendChild(translationText);
+                    
+                    row.appendChild(leftDiv);
+                    row.appendChild(rightSpan);
                     container.appendChild(row);
                 });
             });
@@ -847,7 +938,7 @@ Neue Kategorien starten mit "##".
             // Convert back to markdown
             let mergedMarkdown = '# Vokabel-Datenbank\n\n';
             mergedMarkdown += 'Hier können neue Vokabeln hinzugefügt werden.\n';
-            mergedMarkdown += 'Format: "- Fremdwort : Übersetzung"\n';
+            mergedMarkdown += 'Format: "- Wort : Bedeutung"\n';
             mergedMarkdown += 'Neue Kategorien starten mit "##".\n\n';
             
             Object.keys(existingData).forEach(category => {
@@ -979,11 +1070,28 @@ Neue Kategorien starten mit "##".
                 button.onclick = () => handleQuizOptionClick(option);
                 button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-200 shadow-sm hover:shadow-md';
                 
-                button.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <span>${option.q}</span>
-                    </div>
-                `;
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'flex items-center justify-between';
+                
+                const leftDiv = document.createElement('div');
+                leftDiv.className = 'flex items-center gap-2';
+                
+                const optionSpan = document.createElement('span');
+                optionSpan.textContent = option.q;
+                
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors';
+                speakBtn.title = `Aussprechen: ${option.q}`;
+                speakBtn.innerHTML = '<i class="fa-solid fa-volume-high text-sm"></i>';
+                speakBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    speakText(option.q);
+                });
+                
+                leftDiv.appendChild(optionSpan);
+                leftDiv.appendChild(speakBtn);
+                contentDiv.appendChild(leftDiv);
+                button.appendChild(contentDiv);
                 
                 container.appendChild(button);
             });
@@ -1012,29 +1120,48 @@ Neue Kategorien starten mit "##".
             quizOptions.forEach((opt, idx) => {
                 const button = buttons[idx];
                 button.disabled = true;
+                button.innerHTML = ''; // Clear existing content
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'flex items-center justify-between';
+                
+                const leftDiv = document.createElement('div');
+                leftDiv.className = 'flex items-center gap-2';
+                
+                const optionSpan = document.createElement('span');
+                optionSpan.textContent = opt.q;
+                
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors';
+                speakBtn.title = `Aussprechen: ${opt.q}`;
+                speakBtn.innerHTML = '<i class="fa-solid fa-volume-high text-sm"></i>';
+                speakBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    speakText(opt.q);
+                });
+                
+                leftDiv.appendChild(optionSpan);
+                leftDiv.appendChild(speakBtn);
+                contentDiv.appendChild(leftDiv);
                 
                 if (opt.q === quizItem.q) {
                     // Correct answer - always show green
                     button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-green-100 dark:bg-green-900 border-green-500 dark:border-green-600 text-green-800 dark:text-green-200 shadow-md';
-                    button.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <span>${opt.q}</span>
-                            <i class="fa-solid fa-circle-check text-xl"></i>
-                        </div>
-                    `;
+                    const checkIcon = document.createElement('i');
+                    checkIcon.className = 'fa-solid fa-circle-check text-xl';
+                    contentDiv.appendChild(checkIcon);
                 } else if (selectedOption === opt && !correct) {
                     // Wrong selected option - show red
                     button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-red-100 dark:bg-red-900 border-red-500 dark:border-red-600 text-red-800 dark:text-red-200';
-                    button.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <span>${opt.q}</span>
-                            <i class="fa-solid fa-circle-xmark text-xl"></i>
-                        </div>
-                    `;
+                    const xIcon = document.createElement('i');
+                    xIcon.className = 'fa-solid fa-circle-xmark text-xl';
+                    contentDiv.appendChild(xIcon);
                 } else {
                     // Not selected - fade out
                     button.className = 'w-full p-4 rounded-xl text-left font-semibold transition-all duration-200 border-2 bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 opacity-50';
                 }
+                
+                button.appendChild(contentDiv);
             });
             
             // Show next button
@@ -1137,6 +1264,24 @@ Neue Kategorien starten mit "##".
         initApp();
         initDarkModeToggle();
         initLineNumberEditor();
+        
+        // Add event listeners for flashcard and speak button
+        document.getElementById('flashcard-container').addEventListener('click', flipCard);
+        document.getElementById('speak-card-btn').addEventListener('click', speakCurrentCard);
+        
+        // Add event listeners for language selection buttons
+        document.querySelectorAll('.language-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setTTSLanguage(btn.getAttribute('data-lang'));
+            });
+        });
+        
+        // Load saved TTS language preference
+        const savedLang = localStorage.getItem('ttsLanguage');
+        if (savedLang) {
+            ttsLanguage = savedLang;
+        }
+        updateLanguageButtons();
         
         // Check for shared config on load
         checkForSharedConfig();
