@@ -69,6 +69,9 @@
             padding-right: 4px;
         }
     </style>
+    
+    <!-- Quiz Logic Module -->
+    <script src="../src/quiz-logic.js"></script>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden transition-colors duration-300">
 
@@ -1005,51 +1008,26 @@ Neue Kategorien starten mit "##".
 
         // --- 10. QUIZ FUNCTIONS ---
         
-        // Get all vocabularies from all categories as a flat list
-        function getAllVocabs() {
-            let all = [];
-            Object.values(vocabData).forEach(list => {
-                all = [...all, ...list];
-            });
-            return all;
-        }
+        // Use the shared quiz logic module
+        const { generateQuizQuestion: generateQuizQuestionShared } = window.QuizLogic;
         
         // Generate a new quiz question
         function generateQuizQuestion() {
-            const allVocabs = getAllVocabs();
+            // Use the shared quiz logic module
+            const quiz = generateQuizQuestionShared(vocabData, 'q');
             
-            if (allVocabs.length === 0) {
+            if (!quiz) {
                 document.getElementById('quiz-question').innerText = 'Keine Vokabeln verfügbar';
                 document.getElementById('quiz-options').innerHTML = '';
                 return;
             }
             
-            // Select random target word
-            const randomTarget = allVocabs[Math.floor(Math.random() * allVocabs.length)];
-            
-            // Select 3 wrong options (distractors)
-            let distractors = [];
-            while (distractors.length < 3 && allVocabs.length > 1) {
-                const randomDistractor = allVocabs[Math.floor(Math.random() * allVocabs.length)];
-                if (randomDistractor.q !== randomTarget.q && !distractors.find(d => d.q === randomDistractor.q)) {
-                    distractors.push(randomDistractor);
-                }
-            }
-            
-            // If we don't have enough distractors (less than 4 total vocabs), pad with duplicates
-            while (distractors.length < 3) {
-                distractors.push({ q: `Option ${distractors.length + 1}`, a: 'N/A' });
-            }
-            
-            // Shuffle options
-            const options = [...distractors, randomTarget].sort(() => Math.random() - 0.5);
-            
-            quizItem = randomTarget;
-            quizOptions = options;
+            quizItem = quiz.target;
+            quizOptions = quiz.options;
             selectedOption = null;
             
             // Update UI
-            document.getElementById('quiz-question').innerText = `"${randomTarget.a}"?`;
+            document.getElementById('quiz-question').innerText = `"${quiz.target.a}"?`;
             renderQuizOptions();
             document.getElementById('quiz-next-btn').classList.add('hidden');
         }

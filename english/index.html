@@ -23,6 +23,9 @@
     <!-- Babel Standalone for JSX -->
     <script crossorigin="anonymous" src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
+    <!-- Quiz Logic Module -->
+    <script src="../src/quiz-logic.js"></script>
+    
     <style>
         @keyframes fade-in {
             from { opacity: 0; }
@@ -200,14 +203,8 @@
                 ]
             };
 
-            // Hilfsfunktion: Alle Vokabeln in eine flache Liste für das Quiz
-            const getAllVocabs = () => {
-                let all = [];
-                Object.values(vocabCategories).forEach(list => {
-                    all = [...all, ...list];
-                });
-                return all;
-            };
+            // Use the shared quiz logic module
+            const { generateQuizQuestion: generateQuizQuestionShared } = window.QuizLogic;
 
             // Quiz State
             const [quizItem, setQuizItem] = useState(null);
@@ -219,26 +216,15 @@
 
             // Neues Quiz generieren
             const generateQuestion = () => {
-                const allVocabs = getAllVocabs();
-                // Zufälliges Wort auswählen
-                const randomTarget = allVocabs[Math.floor(Math.random() * allVocabs.length)];
+                // Use the shared quiz logic module
+                const quiz = generateQuizQuestionShared(vocabCategories, 'en');
                 
-                // 3 falsche Optionen auswählen
-                let distractors = [];
-                while (distractors.length < 3) {
-                    const randomDistractor = allVocabs[Math.floor(Math.random() * allVocabs.length)];
-                    if (randomDistractor.en !== randomTarget.en && !distractors.includes(randomDistractor)) {
-                        distractors.push(randomDistractor);
-                    }
+                if (quiz) {
+                    setQuizItem(quiz.target);
+                    setOptions(quiz.options);
+                    setSelectedOption(null);
+                    setIsCorrect(null);
                 }
-
-                // Mischen
-                const quizOptions = [...distractors, randomTarget].sort(() => Math.random() - 0.5);
-
-                setQuizItem(randomTarget);
-                setOptions(quizOptions);
-                setSelectedOption(null);
-                setIsCorrect(null);
             };
 
             useEffect(() => {
