@@ -526,7 +526,7 @@ Neue Kategorien starten mit "##".
 - December: Dezember`;
 
         // --- 2. STATE MANAGEMENT ---
-        let vocabData = {}; // Struktur: { "Kategorie": [ {q: "...", a: "..."}, ... ] }
+        let vocabData = {}; // Structure: { "Category": [ {q: "...", a: "..."}, ... ] }
         let currentCategory = "";
         let currentCardIndex = 0;
         let isFlipped = false;
@@ -595,47 +595,47 @@ Neue Kategorien starten mit "##".
             lines.forEach(line => {
                 line = line.trim();
                 
-                // Leere Zeilen oder Kommentare ignorieren
+                // Ignore empty lines or comments
                 if (!line) return;
-                if (line.startsWith('# ') || (line.startsWith('#') && !line.startsWith('##'))) return; // Titel ignorieren
+                if (line.startsWith('# ') || (line.startsWith('#') && !line.startsWith('##'))) return; // Ignore title
 
-                // Kategorie erkennen (##)
+                // Recognize category (##)
                 if (line.startsWith('##')) {
                     currentCatName = line.replace(/^##\s*/, '').trim();
                     if (!data[currentCatName]) {
                         data[currentCatName] = [];
                     }
                 } 
-                // Vokabel erkennen (- Englisch : Deutsch)
+                // Recognize vocabulary (- English : German)
                 else if (line.startsWith('-')) {
-                    // Entferne das führende "-"
+                    // Remove the leading "-"
                     const content = line.substring(1);
-                    // Split am Doppelpunkt
+                    // Split at colon
                     const parts = content.split(':');
                     
                     if (parts.length >= 2) {
                         const question = parts[0].trim();
-                        // Alles nach dem ersten Doppelpunkt ist die Antwort (falls der Satz Doppelpunkte enthält)
+                        // Everything after the first colon is the answer (in case the sentence contains colons)
                         const answer = parts.slice(1).join(':').trim();
                         
-                        // Wenn noch keine Kategorie existiert, erstelle Default
+                        // If no category exists yet, create default
                         if (!data[currentCatName]) data[currentCatName] = [];
                         
                         data[currentCatName].push({ q: question, a: answer });
                     }
                 }
-                // AUTOFORMAT: Auch Zeilen ohne "-" behandeln, wenn sie einen Doppelpunkt enthalten
+                // AUTOFORMAT: Also handle lines without "-" if they contain a colon
                 else if (line.includes(':') && !line.startsWith('#')) {
-                    // Split am Doppelpunkt
+                    // Split at colon
                     const parts = line.split(':');
                     
                     if (parts.length >= 2) {
                         const question = parts[0].trim();
                         const answer = parts.slice(1).join(':').trim();
                         
-                        // Nur als Vokabel behandeln, wenn beide Teile nicht leer sind
+                        // Only treat as vocabulary if both parts are not empty
                         if (question && answer) {
-                            // Wenn noch keine Kategorie existiert, erstelle Default
+                            // If no category exists yet, create default
                             if (!data[currentCatName]) data[currentCatName] = [];
                             
                             data[currentCatName].push({ q: question, a: answer });
@@ -657,23 +657,23 @@ Neue Kategorien starten mit "##".
                 lineNumber++;
                 const trimmed = line.trim();
                 
-                // Leere Zeilen sind ok
+                // Empty lines are ok
                 if (!trimmed) return;
                 
-                // Titel (# oder etwas anderes außer ##) sind ok
+                // Titles (# or anything except ##) are ok
                 if (trimmed.startsWith('# ') || (trimmed.startsWith('#') && !trimmed.startsWith('##'))) return;
                 
-                // Kategorie (##) ist ok
+                // Category (##) is ok
                 if (trimmed.startsWith('##')) {
                     inCategory = true;
                     return;
                 }
                 
-                // Zeilen die mit - starten sollten Vokabeln sein
+                // Lines that start with - should be vocabulary
                 if (trimmed.startsWith('-')) {
                     const content = trimmed.substring(1);
                     
-                    // Prüfe ob ein Doppelpunkt vorhanden ist
+                    // Check if a colon is present
                     if (!content.includes(':')) {
                         errors.push({
                             line: lineNumber,
@@ -687,7 +687,7 @@ Neue Kategorien starten mit "##".
                     const question = parts[0].trim();
                     const answer = parts.slice(1).join(':').trim();
                     
-                    // Prüfe ob beide Teile nicht leer sind
+                    // Check if both parts are not empty
                     if (!question) {
                         errors.push({
                             line: lineNumber,
@@ -706,17 +706,17 @@ Neue Kategorien starten mit "##".
                     return;
                 }
                 
-                // Andere Zeilen sind möglicherweise ungültig (außer beschreibende Texte am Anfang)
+                // Other lines are possibly invalid (except descriptive texts at the beginning)
                 if (inCategory) {
-                    // AUTOFORMAT: Prüfe ob die Zeile das Format "wort : übersetzung" hat
-                    // In diesem Fall ist es keine Fehler, sondern wird automatisch formatiert
+                    // AUTOFORMAT: Check if the line has the format "word : translation"
+                    // In this case it is not an error, but will be automatically formatted
                     if (trimmed.includes(':')) {
                         const parts = trimmed.split(':');
                         const question = parts[0].trim();
                         const answer = parts.slice(1).join(':').trim();
                         
-                        // Wenn beide Teile vorhanden sind, ist es eine gültige Zeile ohne Dash
-                        // Parser wird sie automatisch verarbeiten
+                        // If both parts are present, it is a valid line without dash
+                        // Parser will process it automatically
                         if (!question || !answer) {
                             errors.push({
                                 line: lineNumber,
@@ -724,9 +724,9 @@ Neue Kategorien starten mit "##".
                                 error: question ? 'Übersetzung (nach dem Doppelpunkt) ist leer' : 'Fremdwort (vor dem Doppelpunkt) ist leer'
                             });
                         }
-                        // Wenn beide Teile da sind, keine Fehlermeldung - wird autoformatiert
+                        // If both parts are present, no error message - will be autoformatted
                     } else {
-                        // Kein Doppelpunkt gefunden - definitiv ein Fehler
+                        // No colon found - definitely an error
                         errors.push({
                             line: lineNumber,
                             text: line,
@@ -747,14 +747,14 @@ Neue Kategorien starten mit "##".
             
             document.getElementById('config-editor').value = configToUse;
             
-            // Parsen
+            // Parse
             vocabData = parseMarkdown(configToUse);
             
             // UI aufbauen
             populateCategorySelect();
             updateListTab();
             
-            // Wähle erste Kategorie
+            // Select first category
             const categories = Object.keys(vocabData);
             if (categories.length > 0) {
                 currentCategory = categories[0];
@@ -982,7 +982,7 @@ Neue Kategorien starten mit "##".
             container.innerHTML = '';
             
             Object.keys(vocabData).forEach(cat => {
-                // Header für Kategorie
+                // Header for category
                 const header = document.createElement('h3');
                 header.className = "text-indigo-600 dark:text-indigo-400 font-bold mt-4 mb-2 uppercase text-xs tracking-wider border-b border-indigo-100 dark:border-indigo-800 pb-1";
                 header.textContent = cat;
@@ -1046,35 +1046,35 @@ Neue Kategorien starten mit "##".
             const formattedLines = lines.map((line, idx) => {
                 const trimmed = line.trim();
                 
-                // Leere Zeilen behalten
+                // Keep empty lines
                 if (!trimmed) return line;
                 
-                // Titel behalten
+                // Keep title
                 if (trimmed.startsWith('# ') || (trimmed.startsWith('#') && !trimmed.startsWith('##'))) return line;
                 
-                // Kategorie behalten und Flag setzen
+                // Keep category and set flag
                 if (trimmed.startsWith('##')) {
                     inCategory = true;
                     return line;
                 }
                 
-                // Zeilen mit Dash behalten
+                // Keep lines with dash
                 if (trimmed.startsWith('-')) return line;
                 
-                // Zeilen in Kategorien, die einen Doppelpunkt haben aber keinen Dash
+                // Lines in categories that have a colon but no dash
                 if (inCategory && trimmed.includes(':') && !trimmed.startsWith('#')) {
                     const parts = trimmed.split(':');
                     const question = parts[0].trim();
                     const answer = parts.slice(1).join(':').trim();
                     
-                    // Nur formatieren wenn beide Teile vorhanden sind
+                    // Only format if both parts are present
                     if (question && answer) {
-                        // Füge Dash am Anfang hinzu und behalte die Struktur
+                        // Add dash at the beginning and keep the structure
                         return line.replace(trimmed, `- ${trimmed}`);
                     }
                 }
                 
-                // Alle anderen Zeilen behalten
+                // Keep all other lines
                 return line;
             });
             
@@ -1193,11 +1193,11 @@ Neue Kategorien starten mit "##".
             // Hide validation errors if previously shown
             hideValidationErrors();
             
-            // Speichern
+            // Save
             localStorage.setItem('vocabConfig', newConfig);
             lastSavedConfig = newConfig;
             
-            // Neu Parsen und Init
+            // Re-parse and initialize
             vocabData = parseMarkdown(newConfig);
             populateCategorySelect();
             updateListTab();
