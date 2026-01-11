@@ -137,16 +137,6 @@
                 localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
             );
 
-            // Learn mode state
-            const [currentCategory, setCurrentCategory] = useState(Object.keys(vocabCategories)[0]);
-            const [currentCardIndex, setCurrentCardIndex] = useState(0);
-            const [categoryVocabs, setCategoryVocabs] = useState({});
-            const [touchStart, setTouchStart] = useState(null);
-            const [touchEnd, setTouchEnd] = useState(null);
-
-            // Quiz mode state
-            const [selectedQuizCategory, setSelectedQuizCategory] = useState('all');
-
             const toggleDarkMode = () => {
                 if (isDarkMode) {
                     document.documentElement.classList.remove('dark');
@@ -175,6 +165,81 @@
                     alert('Text-to-Speech wird in Ihrem Browser nicht unterstützt.');
                 }
             };
+            
+            // Vokabel-Datenbank
+            const vocabCategories = {
+                "Haare (Hair)": [
+                    { de: "blond", en: "blonde" },
+                    { de: "brunette / braunhaarig", en: "brunette" },
+                    { de: "rothaarig", en: "redhead / red-haired" },
+                    { de: "schwarze Haare", en: "black hair" },
+                    { de: "graue Haare", en: "grey hair" },
+                    { de: "glatt", en: "straight" },
+                    { de: "gewellt", en: "wavy" },
+                    { de: "lockig", en: "curly" },
+                    { de: "Glatze", en: "bald" },
+                    { de: "Pferdeschwanz", en: "ponytail" },
+                    { de: "Schulterlang", en: "shoulder-length" }
+                ],
+                "Gesicht & Augen (Face & Eyes)": [
+                    { de: "blaue Augen", en: "blue eyes" },
+                    { de: "braune Augen", en: "brown eyes" },
+                    { de: "grüne Augen", en: "green eyes" },
+                    { de: "haselnussbraune Augen", en: "hazel eyes" },
+                    { de: "Sommersprossen", en: "freckles" },
+                    { de: "Bart", en: "beard" },
+                    { de: "Schnurrbart", en: "mustache" },
+                    { de: "Falten", en: "wrinkles" },
+                    { de: "Brille", en: "glasses" },
+                    { de: "Muttermal", en: "mole" }
+                ],
+                "Hautfarbe & Teint (Complexion)": [
+                    { de: "blass / hell", en: "pale / fair" },
+                    { de: "gebräunt", en: "tanned" },
+                    { de: "dunkelhäutig", en: "dark-skinned" },
+                    { de: "hellhäutig", en: "light-skinned" },
+                    { de: "olivfarbener Teint", en: "olive skin" }
+                ],
+                "Körperbau & Statur (Build)": [
+                    { de: "groß", en: "tall" },
+                    { de: "klein", en: "short" },
+                    { de: "schlank", en: "slim / slender" },
+                    { de: "dünn", en: "thin" },
+                    { de: "pummelig / mollig", en: "plump / chubby" },
+                    { de: "übergewichtig", en: "overweight" },
+                    { de: "muskulös", en: "muscular" },
+                    { de: "durchschnittlich gebaut", en: "average build" },
+                    { de: "fit / gut gebaut", en: "fit / well-built" }
+                ],
+                "Alter (Age)": [
+                    { de: "jung", en: "young" },
+                    { de: "mittleren Alters", en: "middle-aged" },
+                    { de: "alt / ältlich", en: "elderly / old" },
+                    { de: "Teenager", en: "teenager" },
+                    { de: "in den Zwanzigern", en: "in his/her twenties" }
+                ]
+            };
+
+            // Use the shared quiz logic module
+            const { generateQuizQuestion: generateQuizQuestionShared } = window.QuizLogic;
+
+            // Learn mode state
+            const [currentCategory, setCurrentCategory] = useState(Object.keys(vocabCategories)[0]);
+            const [currentCardIndex, setCurrentCardIndex] = useState(0);
+            const [categoryVocabs, setCategoryVocabs] = useState({});
+            const [touchStart, setTouchStart] = useState(null);
+            const [touchEnd, setTouchEnd] = useState(null);
+
+            // Quiz mode state
+            const [selectedQuizCategory, setSelectedQuizCategory] = useState('all');
+
+            // Quiz State
+            const [quizItem, setQuizItem] = useState(null);
+            const [options, setOptions] = useState([]);
+            const [selectedOption, setSelectedOption] = useState(null);
+            const [isCorrect, setIsCorrect] = useState(null);
+            const [score, setScore] = useState(0);
+            const [attempts, setAttempts] = useState(0);
 
             // Initialize category vocabs on mount or when categories change
             useEffect(() => {
@@ -285,71 +350,6 @@
                     }
                 }
             };
-            
-            // Vokabel-Datenbank
-            const vocabCategories = {
-                "Haare (Hair)": [
-                    { de: "blond", en: "blonde" },
-                    { de: "brunette / braunhaarig", en: "brunette" },
-                    { de: "rothaarig", en: "redhead / red-haired" },
-                    { de: "schwarze Haare", en: "black hair" },
-                    { de: "graue Haare", en: "grey hair" },
-                    { de: "glatt", en: "straight" },
-                    { de: "gewellt", en: "wavy" },
-                    { de: "lockig", en: "curly" },
-                    { de: "Glatze", en: "bald" },
-                    { de: "Pferdeschwanz", en: "ponytail" },
-                    { de: "Schulterlang", en: "shoulder-length" }
-                ],
-                "Gesicht & Augen (Face & Eyes)": [
-                    { de: "blaue Augen", en: "blue eyes" },
-                    { de: "braune Augen", en: "brown eyes" },
-                    { de: "grüne Augen", en: "green eyes" },
-                    { de: "haselnussbraune Augen", en: "hazel eyes" },
-                    { de: "Sommersprossen", en: "freckles" },
-                    { de: "Bart", en: "beard" },
-                    { de: "Schnurrbart", en: "mustache" },
-                    { de: "Falten", en: "wrinkles" },
-                    { de: "Brille", en: "glasses" },
-                    { de: "Muttermal", en: "mole" }
-                ],
-                "Hautfarbe & Teint (Complexion)": [
-                    { de: "blass / hell", en: "pale / fair" },
-                    { de: "gebräunt", en: "tanned" },
-                    { de: "dunkelhäutig", en: "dark-skinned" },
-                    { de: "hellhäutig", en: "light-skinned" },
-                    { de: "olivfarbener Teint", en: "olive skin" }
-                ],
-                "Körperbau & Statur (Build)": [
-                    { de: "groß", en: "tall" },
-                    { de: "klein", en: "short" },
-                    { de: "schlank", en: "slim / slender" },
-                    { de: "dünn", en: "thin" },
-                    { de: "pummelig / mollig", en: "plump / chubby" },
-                    { de: "übergewichtig", en: "overweight" },
-                    { de: "muskulös", en: "muscular" },
-                    { de: "durchschnittlich gebaut", en: "average build" },
-                    { de: "fit / gut gebaut", en: "fit / well-built" }
-                ],
-                "Alter (Age)": [
-                    { de: "jung", en: "young" },
-                    { de: "mittleren Alters", en: "middle-aged" },
-                    { de: "alt / ältlich", en: "elderly / old" },
-                    { de: "Teenager", en: "teenager" },
-                    { de: "in den Zwanzigern", en: "in his/her twenties" }
-                ]
-            };
-
-            // Use the shared quiz logic module
-            const { generateQuizQuestion: generateQuizQuestionShared } = window.QuizLogic;
-
-            // Quiz State
-            const [quizItem, setQuizItem] = useState(null);
-            const [options, setOptions] = useState([]);
-            const [selectedOption, setSelectedOption] = useState(null);
-            const [isCorrect, setIsCorrect] = useState(null);
-            const [score, setScore] = useState(0);
-            const [attempts, setAttempts] = useState(0);
 
             // Neues Quiz generieren
             const generateQuestion = () => {
