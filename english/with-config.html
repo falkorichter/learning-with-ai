@@ -263,6 +263,9 @@
             <div id="share-msg" class="text-center text-indigo-600 text-sm mt-2 opacity-0 transition-opacity">
                 Link in Zwischenablage kopiert!
             </div>
+            <div id="autosave-indicator" class="text-center text-blue-600 dark:text-blue-400 text-sm mt-2 opacity-0 transition-opacity flex items-center justify-center gap-1">
+                <i class="fa-solid fa-circle-check"></i> Automatisch gespeichert
+            </div>
             
             <!-- Validation Errors Display -->
             <div id="validation-errors" class="hidden mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg max-h-64 overflow-y-auto custom-scroll">
@@ -504,6 +507,24 @@ Neue Kategorien starten mit "##".
                         data[currentCatName].push({ q: question, a: answer });
                     }
                 }
+                // AUTOFORMAT: Auch Zeilen ohne "-" behandeln, wenn sie einen Doppelpunkt enthalten
+                else if (line.includes(':') && !line.startsWith('#')) {
+                    // Split am Doppelpunkt
+                    const parts = line.split(':');
+                    
+                    if (parts.length >= 2) {
+                        const question = parts[0].trim();
+                        const answer = parts.slice(1).join(':').trim();
+                        
+                        // Nur als Vokabel behandeln, wenn beide Teile nicht leer sind
+                        if (question && answer) {
+                            // Wenn noch keine Kategorie existiert, erstelle Default
+                            if (!data[currentCatName]) data[currentCatName] = [];
+                            
+                            data[currentCatName].push({ q: question, a: answer });
+                        }
+                    }
+                }
             });
             return data;
         }
@@ -570,11 +591,31 @@ Neue Kategorien starten mit "##".
                 
                 // Andere Zeilen sind möglicherweise ungültig (außer beschreibende Texte am Anfang)
                 if (inCategory) {
-                    errors.push({
-                        line: lineNumber,
-                        text: line,
-                        error: 'Zeile beginnt nicht mit "-" (sollte eine Vokabel sein) oder "##" (neue Kategorie)'
-                    });
+                    // AUTOFORMAT: Prüfe ob die Zeile das Format "wort : übersetzung" hat
+                    // In diesem Fall ist es keine Fehler, sondern wird automatisch formatiert
+                    if (trimmed.includes(':')) {
+                        const parts = trimmed.split(':');
+                        const question = parts[0].trim();
+                        const answer = parts.slice(1).join(':').trim();
+                        
+                        // Wenn beide Teile vorhanden sind, ist es eine gültige Zeile ohne Dash
+                        // Parser wird sie automatisch verarbeiten
+                        if (!question || !answer) {
+                            errors.push({
+                                line: lineNumber,
+                                text: line,
+                                error: question ? 'Übersetzung (nach dem Doppelpunkt) ist leer' : 'Fremdwort (vor dem Doppelpunkt) ist leer'
+                            });
+                        }
+                        // Wenn beide Teile da sind, keine Fehlermeldung - wird autoformatiert
+                    } else {
+                        // Kein Doppelpunkt gefunden - definitiv ein Fehler
+                        errors.push({
+                            line: lineNumber,
+                            text: line,
+                            error: 'Zeile beginnt nicht mit "-" und hat keinen Doppelpunkt (:) zur Trennung'
+                        });
+                    }
                 }
             });
 
@@ -774,10 +815,151 @@ Neue Kategorien starten mit "##".
         }
 
         // --- 8. CONFIG EDITOR FUNKTIONEN ---
-        function saveConfig() {
-            const newConfig = document.getElementById('config-editor').value;
+        
+        // Autoformat markdown to add dashes where missing
+        function autoformatMarkdown(text) {
+            const lines = text.split('\n');
+            let inCategory = false;
             
-            // Validate the configuration first
+            const formattedLines = lines.map((line, idx) => {
+                const trimmed = line.trim();
+                
+                // Leere Zeilen behalten
+                if (!trimmed) return line;
+                
+                // Titel behalten
+                if (trimmed.startsWith('# ') || (trimmed.startsWith('#') && !trimmed.startsWith('##'))) return line;
+                
+                // Kategorie behalten und Flag setzen
+                if (trimmed.startsWith('##')) {
+                    inCategory = true;
+                    return line;
+                }
+                
+                // Zeilen mit Dash behalten
+                if (trimmed.startsWith('-')) return line;
+                
+                // Zeilen in Kategorien, die einen Doppelpunkt haben aber keinen Dash
+                if (inCategory && trimmed.includes(':') && !trimmed.startsWith('#')) {
+                    const parts = trimmed.split(':');
+                    const question = parts[0].trim();
+                    const answer = parts.slice(1).join(':').trim();
+                    
+                    // Nur formatieren wenn beide Teile vorhanden sind
+                    if (question && answer) {
+                        // Füge Dash am Anfang hinzu und behalte die Struktur
+                        return line.replace(trimmed, `- ${trimmed}`);
+                    }
+                }
+                
+                // Alle anderen Zeilen behalten
+                return line;
+            });
+            
+            return formattedLines.join('\n');
+        }
+        
+        // Autosave timeout reference
+        let autosaveTimeout = null;
+        let lastSavedConfig = null;
+        
+        // Autosave function with debouncing
+        function triggerAutosave() {
+            // Clear existing timeout
+            if (autosaveTimeout) {
+                clearTimeout(autosaveTimeout);
+            }
+            
+            // Set new timeout (500ms debounce)
+            autosaveTimeout = setTimeout(() => {
+                const config = document.getElementById('config-editor').value;
+                
+                // Check if config has changed
+                if (config === lastSavedConfig) {
+                    return;
+                }
+                
+                // Validate before autosaving
+                const validationErrors = validateMarkdown(config);
+                
+                // Only autosave if valid
+                if (validationErrors.length === 0) {
+                    // Apply autoformat
+                    const formatted = autoformatMarkdown(config);
+                    
+                    // Update editor if formatted version is different
+                    if (formatted !== config) {
+                        const editor = document.getElementById('config-editor');
+                        const cursorPos = editor.selectionStart;
+                        const linesBefore = config.substring(0, cursorPos).split('\n').length;
+                        
+                        editor.value = formatted;
+                        
+                        // Try to restore cursor position (approximately)
+                        const newLines = formatted.split('\n');
+                        let newCursorPos = 0;
+                        for (let i = 0; i < linesBefore && i < newLines.length; i++) {
+                            newCursorPos += newLines[i].length + 1; // +1 for newline
+                        }
+                        editor.selectionStart = editor.selectionEnd = Math.min(newCursorPos, formatted.length);
+                        
+                        updateLineNumbers();
+                    }
+                    
+                    // Save to localStorage
+                    localStorage.setItem('vocabConfig', formatted);
+                    lastSavedConfig = formatted;
+                    
+                    // Re-parse and update UI
+                    vocabData = parseMarkdown(formatted);
+                    populateCategorySelect();
+                    updateListTab();
+                    
+                    // Update current category if it still exists
+                    const categories = Object.keys(vocabData);
+                    if (!categories.includes(currentCategory) && categories.length > 0) {
+                        currentCategory = categories[0];
+                        document.getElementById('category-select').value = currentCategory;
+                    }
+                    
+                    resetCardVisuals();
+                    showCard();
+                    
+                    // Show autosave indicator
+                    showAutosaveIndicator();
+                } else {
+                    // Clear autosave indicator if validation fails
+                    hideAutosaveIndicator();
+                }
+            }, 500);
+        }
+        
+        function showAutosaveIndicator() {
+            const indicator = document.getElementById('autosave-indicator');
+            if (indicator) {
+                indicator.style.opacity = '1';
+                setTimeout(() => {
+                    indicator.style.opacity = '0';
+                }, 2000);
+            }
+        }
+        
+        function hideAutosaveIndicator() {
+            const indicator = document.getElementById('autosave-indicator');
+            if (indicator) {
+                indicator.style.opacity = '0';
+            }
+        }
+        
+        function saveConfig() {
+            let newConfig = document.getElementById('config-editor').value;
+            
+            // Apply autoformat first
+            newConfig = autoformatMarkdown(newConfig);
+            document.getElementById('config-editor').value = newConfig;
+            updateLineNumbers();
+            
+            // Validate the configuration
             const validationErrors = validateMarkdown(newConfig);
             
             if (validationErrors.length > 0) {
@@ -791,6 +973,7 @@ Neue Kategorien starten mit "##".
             
             // Speichern
             localStorage.setItem('vocabConfig', newConfig);
+            lastSavedConfig = newConfig;
             
             // Neu Parsen und Init
             vocabData = parseMarkdown(newConfig);
@@ -1225,11 +1408,17 @@ Neue Kategorien starten mit "##".
             // Update line numbers on input
             editor.addEventListener('input', updateLineNumbers);
             
+            // Trigger autosave on input
+            editor.addEventListener('input', triggerAutosave);
+            
             // Sync scroll
             editor.addEventListener('scroll', syncScroll);
             
             // Initial update
             updateLineNumbers();
+            
+            // Initialize lastSavedConfig
+            lastSavedConfig = editor.value;
         }
 
         // --- START ---
