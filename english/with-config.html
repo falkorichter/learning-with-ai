@@ -1343,10 +1343,12 @@
             });
             
             // Convert back to markdown
-            let mergedMarkdown = '# Vokabel-Datenbank\n\n';
-            mergedMarkdown += 'Hier können neue Vokabeln hinzugefügt werden.\n';
-            mergedMarkdown += 'Format: "- Wort : Bedeutung"\n';
-            mergedMarkdown += 'Neue Kategorien starten mit "##".\n\n';
+            let mergedMarkdown = '// Vokabel-Datenbank\n';
+            mergedMarkdown += '//\n';
+            mergedMarkdown += '// Hier können neue Vokabeln hinzugefügt werden.\n';
+            mergedMarkdown += '// Format: "- Wort : Bedeutung"\n';
+            mergedMarkdown += '// Neue Kategorien starten mit "##".\n';
+            mergedMarkdown += '// Kommentarzeilen starten mit "//".\n\n';
             
             Object.keys(existingData).forEach(category => {
                 mergedMarkdown += `## ${category}\n`;
