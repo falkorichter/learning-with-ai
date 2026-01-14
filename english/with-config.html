@@ -351,11 +351,12 @@
     <!-- JavaScript Logic -->
     <script>
         // --- 1. DEFAULT DATEN (Fallback) ---
-        const defaultMarkdown = `# Vokabel-Datenbank
-
-Hier können neue Vokabeln hinzugefügt werden.
-Format: "- Wort : Bedeutung"
-Neue Kategorien starten mit "##".
+        const defaultMarkdown = `// Vokabel-Datenbank
+//
+// Hier können neue Vokabeln hinzugefügt werden.
+// Format: "- Wort : Bedeutung"
+// Neue Kategorien starten mit "##".
+// Kommentarzeilen starten mit "//".
 
 ## the body
 
@@ -586,18 +587,29 @@ Neue Kategorien starten mit "##".
             });
         }
         
-        // --- 3. PARSER (Kern-Logik) ---
+        // --- 3. HELPER FUNCTIONS ---
+        // Helper function to check if a line should be ignored (comments, empty lines, titles)
+        function isIgnorableLine(line) {
+            const trimmed = line.trim();
+            if (!trimmed) return true; // Empty lines
+            if (trimmed.startsWith('//')) return true; // Double-slash comments
+            // Titles: single # with space, or any # that's not ##
+            if (trimmed.startsWith('# ')) return true;
+            if (trimmed.startsWith('#') && !trimmed.startsWith('##')) return true;
+            return false;
+        }
+        
+        // --- 4. PARSER (Kern-Logik) ---
         function parseMarkdown(text) {
             const lines = text.split('\n');
             const data = {};
             let currentCatName = "Unkategorisiert";
 
             lines.forEach(line => {
-                line = line.trim();
+                // Ignore empty lines, comments, and titles
+                if (isIgnorableLine(line)) return;
                 
-                // Ignore empty lines or comments
-                if (!line) return;
-                if (line.startsWith('# ') || (line.startsWith('#') && !line.startsWith('##'))) return; // Ignore title
+                line = line.trim();
 
                 // Recognize category (##)
                 if (line.startsWith('##')) {
@@ -657,11 +669,8 @@ Neue Kategorien starten mit "##".
                 lineNumber++;
                 const trimmed = line.trim();
                 
-                // Empty lines are ok
-                if (!trimmed) return;
-                
-                // Titles (# or anything except ##) are ok
-                if (trimmed.startsWith('# ') || (trimmed.startsWith('#') && !trimmed.startsWith('##'))) return;
+                // Check if line should be ignored (empty, comments, titles)
+                if (isIgnorableLine(trimmed)) return;
                 
                 // Category (##) is ok
                 if (trimmed.startsWith('##')) {
@@ -1338,20 +1347,24 @@ Neue Kategorien starten mit "##".
             });
             
             // Convert back to markdown
-            let mergedMarkdown = '# Vokabel-Datenbank\n\n';
-            mergedMarkdown += 'Hier können neue Vokabeln hinzugefügt werden.\n';
-            mergedMarkdown += 'Format: "- Wort : Bedeutung"\n';
-            mergedMarkdown += 'Neue Kategorien starten mit "##".\n\n';
+            const header = [
+                '// Vokabel-Datenbank',
+                '//',
+                '// Hier können neue Vokabeln hinzugefügt werden.',
+                '// Format: "- Wort : Bedeutung"',
+                '// Neue Kategorien starten mit "##".',
+                '// Kommentarzeilen starten mit "//".',
+                ''
+            ].join('\n');
             
-            Object.keys(existingData).forEach(category => {
-                mergedMarkdown += `## ${category}\n`;
-                existingData[category].forEach(vocab => {
-                    mergedMarkdown += `- ${vocab.q} : ${vocab.a}\n`;
-                });
-                mergedMarkdown += '\n';
-            });
+            const categories = Object.keys(existingData).map(category => {
+                const vocabLines = existingData[category].map(vocab => 
+                    `- ${vocab.q} : ${vocab.a}`
+                ).join('\n');
+                return `## ${category}\n${vocabLines}\n`;
+            }).join('\n');
             
-            return mergedMarkdown;
+            return header + '\n' + categories;
         }
 
         // Import config from URL parameter
