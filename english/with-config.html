@@ -351,11 +351,12 @@
     <!-- JavaScript Logic -->
     <script>
         // --- 1. DEFAULT DATEN (Fallback) ---
-        const defaultMarkdown = `# Vokabel-Datenbank
-
-Hier können neue Vokabeln hinzugefügt werden.
-Format: "- Wort : Bedeutung"
-Neue Kategorien starten mit "##".
+        const defaultMarkdown = `// Vokabel-Datenbank
+//
+// Hier können neue Vokabeln hinzugefügt werden.
+// Format: "- Wort : Bedeutung"
+// Neue Kategorien starten mit "##".
+// Kommentarzeilen starten mit "//".
 
 ## the body
 
@@ -597,6 +598,7 @@ Neue Kategorien starten mit "##".
                 
                 // Ignore empty lines or comments
                 if (!line) return;
+                if (line.startsWith('//')) return; // Ignore double-slash comments
                 if (line.startsWith('# ') || (line.startsWith('#') && !line.startsWith('##'))) return; // Ignore title
 
                 // Recognize category (##)
@@ -659,6 +661,9 @@ Neue Kategorien starten mit "##".
                 
                 // Empty lines are ok
                 if (!trimmed) return;
+                
+                // Double-slash comments are ok
+                if (trimmed.startsWith('//')) return;
                 
                 // Titles (# or anything except ##) are ok
                 if (trimmed.startsWith('# ') || (trimmed.startsWith('#') && !trimmed.startsWith('##'))) return;

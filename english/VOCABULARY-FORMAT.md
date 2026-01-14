@@ -9,11 +9,12 @@ Der dynamische Vokabeltrainer verwendet ein einfaches Markdown-Format für Vokab
 ### Grundstruktur
 
 ```markdown
-# Vokabel-Datenbank
-
-Hier können neue Vokabeln hinzugefügt werden.
-Format: "- Fremdwort : Übersetzung"
-Neue Kategorien starten mit "##".
+// Vokabel-Datenbank
+//
+// Hier können neue Vokabeln hinzugefügt werden.
+// Format: "- Fremdwort : Übersetzung"
+// Neue Kategorien starten mit "##".
+// Kommentarzeilen starten mit "//".
 
 ## Kategorie Name
 - Wort1 : Übersetzung1
@@ -43,7 +44,10 @@ Neue Kategorien starten mit "##".
 
 4. **Leere Zeilen** zwischen Kategorien und Einträgen sind erlaubt und werden ignoriert
 
-5. **Kommentarzeilen** mit `#` (nicht `##`) am Anfang des Dokuments sind erlaubt
+5. **Kommentarzeilen** mit `//` am Anfang sind erlaubt und werden ignoriert
+   - ✅ `// Dies ist ein Kommentar`
+   - ✅ `// Format: "- Wort : Bedeutung"`
+   - Kommentarzeilen sind ideal für Beschreibungen und Hinweise am Anfang der Datei
 
 ## Häufige Fehler
 
@@ -119,11 +123,12 @@ Jonte_der_Baumeister: the one and only Jonte
 ## Beispiel: Vollständige valide Liste
 
 ```markdown
-# Vokabel-Datenbank
-
-Hier können neue Vokabeln hinzugefügt werden.
-Format: "- Fremdwort : Übersetzung"
-Neue Kategorien starten mit "##".
+// Vokabel-Datenbank
+//
+// Hier können neue Vokabeln hinzugefügt werden.
+// Format: "- Fremdwort : Übersetzung"
+// Neue Kategorien starten mit "##".
+// Kommentarzeilen starten mit "//".
 
 ## Scratch
 - modulo : Rest berechnen
